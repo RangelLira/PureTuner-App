@@ -6,79 +6,119 @@ export interface AudioAnalysisResult {
 
 export class AudioProcessor {
   private sampleRate: number;
-  private bufferSize: number;
   private minFrequency: number;
   private maxFrequency: number;
+  private accumulatedBuffer: Float32Array;
+  private accumulatedSize: number;
+  private readonly targetBufferSize = 2048;
+  private readonly downsampleFactor = 4;
 
-  constructor(
-    sampleRate = 44100,
-    bufferSize = 2048,
-    minFrequency = 60,
-    maxFrequency = 1200,
-  ) {
+  constructor(sampleRate = 22050, minFrequency = 60, maxFrequency = 1200) {
     this.sampleRate = sampleRate;
-    this.bufferSize = bufferSize;
     this.minFrequency = minFrequency;
     this.maxFrequency = maxFrequency;
+    this.accumulatedBuffer = new Float32Array(this.targetBufferSize * 4);
+    this.accumulatedSize = 0;
   }
 
   public processAudioBuffer(audioData: Float32Array): AudioAnalysisResult | null {
-    try {
-      const volume = this.calculateRMS(audioData);
-      if (volume < 0.01) return null;
+    const available = this.accumulatedBuffer.length - this.accumulatedSize;
+    const toCopy = Math.min(audioData.length, available);
+    this.accumulatedBuffer.set(audioData.subarray(0, toCopy), this.accumulatedSize);
+    this.accumulatedSize += toCopy;
 
-      const { frequency, confidence } = this.detectPitchYIN(audioData);
-      if (!this.isValidMusicalFrequency(frequency)) return null;
+    if (this.accumulatedSize < this.targetBufferSize) return null;
 
-      return { frequency, volume, confidence };
-    } catch {
-      return null;
-    }
+    const buffer = this.accumulatedBuffer.subarray(0, this.targetBufferSize);
+    const volume = this.calculateRMS(buffer);
+
+    const slide = Math.floor(this.targetBufferSize / 4);
+    this.accumulatedBuffer.copyWithin(0, slide, this.accumulatedSize);
+    this.accumulatedSize -= slide;
+
+    if (volume < 0.003) return { frequency: 0, volume, confidence: 0 };
+
+    // Downsample antes de processar
+    const downsampled = this.downsample(buffer, this.downsampleFactor);
+    const downsampledRate = this.sampleRate / this.downsampleFactor;
+
+    const result = this.detectPitchAutocorrelation(downsampled, downsampledRate, volume);
+    return result;
   }
 
-  // Algoritmo YIN — de Cheveigne & Kawahara 2002
-  private detectPitchYIN(buffer: Float32Array): { frequency: number; confidence: number } {
-    const bufferSize = Math.min(this.bufferSize, buffer.length);
-    const yinBuffer = new Float32Array(bufferSize);
-
-    let sum = 0;
-    for (let tau = 1; tau < bufferSize; tau++) {
-      let dfn = 0;
-      for (let i = 0; i < bufferSize - tau; i++) {
-        dfn += Math.pow(buffer[i] - buffer[i + tau], 2);
-      }
-      sum += dfn;
-      yinBuffer[tau] = sum > 0 ? (dfn * tau) / sum : 0;
-    }
-
-    const threshold = 0.15;
-    let tau = 2;
-
-    while (tau < bufferSize) {
-      if (yinBuffer[tau] < threshold) {
-        while (tau + 1 < bufferSize && yinBuffer[tau + 1] < yinBuffer[tau]) {
-          tau++;
-        }
-        const period = this.interpolateParabolic(yinBuffer, tau);
-        return {
-          frequency: this.sampleRate / period,
-          confidence: 1 - yinBuffer[tau],
-        };
-      }
-      tau++;
-    }
-
-    return { frequency: 0, confidence: 0 };
+  public resetBuffer(): void {
+    this.accumulatedSize = 0;
   }
 
-  private interpolateParabolic(array: Float32Array, index: number): number {
-    if (index <= 0 || index >= array.length - 1) return index;
-    const y0 = array[index - 1];
-    const y1 = array[index];
-    const y2 = array[index + 1];
-    const denominator = 2 * y1 - y0 - y2;
-    if (denominator === 0) return index;
-    return index + 0.5 * (y2 - y0) / denominator;
+  // Downsampling por média — suaviza aliasing
+  private downsample(buffer: Float32Array, factor: number): Float32Array {
+    const outLen = Math.floor(buffer.length / factor);
+    const out = new Float32Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      let sum = 0;
+      for (let j = 0; j < factor; j++) {
+        sum += buffer[i * factor + j];
+      }
+      out[i] = sum / factor;
+    }
+    return out;
+  }
+
+  private detectPitchAutocorrelation(
+    buffer: Float32Array,
+    sampleRate: number,
+    volume: number,
+  ): AudioAnalysisResult | null {
+    const minPeriod = Math.floor(sampleRate / this.maxFrequency);
+    const maxPeriod = Math.floor(sampleRate / this.minFrequency);
+    const n = buffer.length;
+
+    let bestPeriod = -1;
+    let bestCorr = -Infinity;
+
+    for (let period = minPeriod; period <= maxPeriod; period++) {
+      let corr = 0;
+      for (let i = 0; i < n - period; i++) {
+        corr += buffer[i] * buffer[i + period];
+      }
+      corr = corr / (n - period);
+      if (corr > bestCorr) {
+        bestCorr = corr;
+        bestPeriod = period;
+      }
+    }
+
+    if (bestPeriod <= 0) return null;
+
+    const rmsSquared = volume * volume;
+    const confidence = rmsSquared > 0 ? Math.min(bestCorr / rmsSquared, 1.0) : 0;
+
+    if (confidence < 0.35) return null;
+
+    // Refinamento parabólico
+    let refinedPeriod = bestPeriod;
+    if (bestPeriod > minPeriod && bestPeriod < maxPeriod) {
+      const c0 = this.autocorrAt(buffer, bestPeriod - 1, n);
+      const c1 = bestCorr;
+      const c2 = this.autocorrAt(buffer, bestPeriod + 1, n);
+      const denom = 2 * c1 - c0 - c2;
+      if (denom > 0) {
+        refinedPeriod = bestPeriod + 0.5 * (c2 - c0) / denom;
+      }
+    }
+
+    const frequency = sampleRate / refinedPeriod;
+    if (!this.isValidMusicalFrequency(frequency)) return null;
+
+    return { frequency, volume, confidence };
+  }
+
+  private autocorrAt(buffer: Float32Array, period: number, n: number): number {
+    let corr = 0;
+    for (let i = 0; i < n - period; i++) {
+      corr += buffer[i] * buffer[i + period];
+    }
+    return corr / (n - period);
   }
 
   private calculateRMS(buffer: Float32Array): number {

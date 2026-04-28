@@ -61,9 +61,9 @@ export const NOTE_FREQUENCIES: Record<string, number[]> = {
 };
 
 export const TUNER_CONFIG = {
-  sampleRate: 44100,
+  sampleRate: 22050,
   bufferSize: 2048,
   smoothingFactor: 0.8,
-  minVolume: 0.01,
+  minVolume: 0.005,
   centTolerance: 10,
 };

@@ -13,18 +13,16 @@ const INITIAL_STATE: TunerState = {
   isInTune: false,
 };
 
-const UPDATE_THROTTLE_MS = 100;
-
 export function useTuner() {
   const [tunerState, setTunerState] = useState<TunerState>(INITIAL_STATE);
 
   const audioCapture = useRef<RealAudioCapture | null>(null);
   const audioProcessor = useRef<AudioProcessor | null>(null);
   const pitchDetector = useRef<PitchDetector | null>(null);
-  const lastUpdateTime = useRef(0);
+  const isListeningRef = useRef(false);
 
   useEffect(() => {
-    audioProcessor.current = new AudioProcessor(TUNER_CONFIG.sampleRate, TUNER_CONFIG.bufferSize);
+    audioProcessor.current = new AudioProcessor(TUNER_CONFIG.sampleRate);
     pitchDetector.current = new PitchDetector(TUNER_CONFIG.centTolerance);
     audioCapture.current = new RealAudioCapture({
       sampleRate: TUNER_CONFIG.sampleRate,
@@ -38,21 +36,28 @@ export function useTuner() {
   }, []);
 
   const processAudioBuffer = useCallback((audioBuffer: AudioBuffer) => {
-    const now = Date.now();
-    if (now - lastUpdateTime.current < UPDATE_THROTTLE_MS) return;
+    if (!isListeningRef.current) return;
     if (!audioProcessor.current || !pitchDetector.current) return;
 
     const analysisResult = audioProcessor.current.processAudioBuffer(audioBuffer.data);
-    if (!analysisResult || analysisResult.frequency <= 0) return;
+    if (!analysisResult) return;
+
+    // Silêncio — limpa imediatamente
+    if (analysisResult.frequency <= 0) {
+      setTunerState(prev => ({
+        ...prev,
+        currentNote: '',
+        frequency: 0,
+        cents: 0,
+        isInTune: false,
+      }));
+      return;
+    }
 
     const pitchResult = pitchDetector.current.detectPitch(
       analysisResult.frequency,
       analysisResult.confidence,
     );
-
-    if ((pitchResult.confidence ?? 1) < 0.3) return;
-
-    lastUpdateTime.current = now;
 
     setTunerState({
       isListening: true,
@@ -64,22 +69,23 @@ export function useTuner() {
   }, []);
 
   const startListening = useCallback(async () => {
-    if (tunerState.isListening || !audioCapture.current) return;
+    if (isListeningRef.current || !audioCapture.current) return;
 
     const started = await audioCapture.current.startCapture(processAudioBuffer);
     if (started) {
+      isListeningRef.current = true;
       setTunerState(prev => ({ ...prev, isListening: true }));
     }
-  }, [tunerState.isListening, processAudioBuffer]);
+  }, [processAudioBuffer]);
 
   const stopListening = useCallback(async () => {
-    if (!tunerState.isListening || !audioCapture.current) return;
+    if (!isListeningRef.current || !audioCapture.current) return;
 
+    isListeningRef.current = false;
     await audioCapture.current.stopCapture();
-    pitchDetector.current?.clearHistory();
-
+    audioProcessor.current?.resetBuffer();
     setTunerState(INITIAL_STATE);
-  }, [tunerState.isListening]);
+  }, []);
 
   return {
     isListening: tunerState.isListening,
