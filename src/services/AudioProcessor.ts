@@ -10,8 +10,13 @@ export class AudioProcessor {
   private maxFrequency: number;
   private accumulatedBuffer: Float32Array;
   private accumulatedSize: number;
-  private readonly targetBufferSize = 2048;
+  private readonly targetBufferSize = 1024;
   private readonly downsampleFactor = 4;
+
+  // Silence gate com histerese
+  private isSilent = true;
+  private readonly silenceThreshold = 0.0015;
+  private readonly soundThreshold = 0.003;
 
   constructor(sampleRate = 22050, minFrequency = 60, maxFrequency = 1200) {
     this.sampleRate = sampleRate;
@@ -32,25 +37,35 @@ export class AudioProcessor {
     const buffer = this.accumulatedBuffer.subarray(0, this.targetBufferSize);
     const volume = this.calculateRMS(buffer);
 
-    const slide = Math.floor(this.targetBufferSize / 4);
+    // Slide de metade — mais atualizações por segundo
+    const slide = Math.floor(this.targetBufferSize / 2);
     this.accumulatedBuffer.copyWithin(0, slide, this.accumulatedSize);
     this.accumulatedSize -= slide;
 
-    if (volume < 0.003) return { frequency: 0, volume, confidence: 0 };
+    // Silence gate com histerese — evita piscar entre nota e silêncio
+    if (this.isSilent) {
+      if (volume < this.soundThreshold) {
+        return { frequency: 0, volume, confidence: 0 };
+      }
+      this.isSilent = false;
+    } else {
+      if (volume < this.silenceThreshold) {
+        this.isSilent = true;
+        return { frequency: 0, volume, confidence: 0 };
+      }
+    }
 
-    // Downsample antes de processar
     const downsampled = this.downsample(buffer, this.downsampleFactor);
     const downsampledRate = this.sampleRate / this.downsampleFactor;
 
-    const result = this.detectPitchAutocorrelation(downsampled, downsampledRate, volume);
-    return result;
+    return this.detectPitchAutocorrelation(downsampled, downsampledRate, volume);
   }
 
   public resetBuffer(): void {
     this.accumulatedSize = 0;
+    this.isSilent = true;
   }
 
-  // Downsampling por média — suaviza aliasing
   private downsample(buffer: Float32Array, factor: number): Float32Array {
     const outLen = Math.floor(buffer.length / factor);
     const out = new Float32Array(outLen);
@@ -92,8 +107,18 @@ export class AudioProcessor {
 
     const rmsSquared = volume * volume;
     const confidence = rmsSquared > 0 ? Math.min(bestCorr / rmsSquared, 1.0) : 0;
-
     if (confidence < 0.35) return null;
+
+    // Correção de oitava: verifica se metade do período tem correlação boa
+    // Se sim, a nota real está uma oitava acima
+    const halfPeriod = Math.floor(bestPeriod / 2);
+    if (halfPeriod >= minPeriod) {
+      const halfCorr = this.autocorrAt(buffer, halfPeriod, n);
+      if (halfCorr > bestCorr * 0.85) {
+        bestPeriod = halfPeriod;
+        bestCorr = halfCorr;
+      }
+    }
 
     // Refinamento parabólico
     let refinedPeriod = bestPeriod;
