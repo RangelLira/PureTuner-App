@@ -5,7 +5,7 @@ import { colors } from '../constants/colors';
 import { useTuner } from '../hooks/useTuner';
 
 export function TunerScreen() {
-  const { isListening, currentNote, frequency, cents, isInTune, startListening, stopListening } =
+  const { isListening, currentNote, frequency, cents, isInTune, error, startListening, stopListening } =
     useTuner();
 
   const handleToggle = () => {
@@ -25,14 +25,20 @@ export function TunerScreen() {
         </Text>
       </View>
 
-      <View style={styles.tunerContainer}>
-        <TunerIndicator
-          note={currentNote}
-          frequency={frequency}
-          cents={cents}
-          isInTune={isInTune}
-        />
-      </View>
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : (
+        <View style={styles.tunerContainer}>
+          <TunerIndicator
+            note={currentNote}
+            frequency={frequency}
+            cents={cents}
+            isInTune={isInTune}
+          />
+        </View>
+      )}
 
       <View style={styles.controlsContainer}>
         <TouchableOpacity
@@ -52,31 +58,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.neutral.lightGray,
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: 64,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 20,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: colors.secondary.darkBlue,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.neutral.mediumGray,
-    textAlign: 'center',
   },
   tunerContainer: {
     flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 15,
+    color: colors.status.error,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   controlsContainer: {
     alignItems: 'center',
-    paddingBottom: 48,
+    paddingBottom: 40,
   },
   button: {
     paddingHorizontal: 56,

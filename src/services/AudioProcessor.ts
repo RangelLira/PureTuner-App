@@ -13,6 +13,9 @@ export class AudioProcessor {
   private readonly targetBufferSize = 1024;
   private readonly downsampleFactor = 4;
 
+  // Buffer pré-alocado — evita new Float32Array() a cada frame (~22×/seg)
+  private readonly downsampleBuffer: Float32Array;
+
   // Silence gate com histerese
   private isSilent = true;
   private readonly silenceThreshold = 0.0015;
@@ -24,6 +27,9 @@ export class AudioProcessor {
     this.maxFrequency = maxFrequency;
     this.accumulatedBuffer = new Float32Array(this.targetBufferSize * 4);
     this.accumulatedSize = 0;
+    this.downsampleBuffer = new Float32Array(
+      Math.ceil(this.targetBufferSize / this.downsampleFactor),
+    );
   }
 
   public processAudioBuffer(audioData: Float32Array): AudioAnalysisResult | null {
@@ -55,10 +61,11 @@ export class AudioProcessor {
       }
     }
 
-    const downsampled = this.downsample(buffer, this.downsampleFactor);
+    const downsampledLen = this.downsampleInto(buffer, this.downsampleFactor);
+    const downsampledView = this.downsampleBuffer.subarray(0, downsampledLen);
     const downsampledRate = this.sampleRate / this.downsampleFactor;
 
-    return this.detectPitchAutocorrelation(downsampled, downsampledRate, volume);
+    return this.detectPitchAutocorrelation(downsampledView, downsampledRate, volume);
   }
 
   public resetBuffer(): void {
@@ -66,17 +73,16 @@ export class AudioProcessor {
     this.isSilent = true;
   }
 
-  private downsample(buffer: Float32Array, factor: number): Float32Array {
+  private downsampleInto(buffer: Float32Array, factor: number): number {
     const outLen = Math.floor(buffer.length / factor);
-    const out = new Float32Array(outLen);
     for (let i = 0; i < outLen; i++) {
       let sum = 0;
       for (let j = 0; j < factor; j++) {
         sum += buffer[i * factor + j];
       }
-      out[i] = sum / factor;
+      this.downsampleBuffer[i] = sum / factor;
     }
-    return out;
+    return outLen;
   }
 
   private detectPitchAutocorrelation(
@@ -92,11 +98,7 @@ export class AudioProcessor {
     let bestCorr = -Infinity;
 
     for (let period = minPeriod; period <= maxPeriod; period++) {
-      let corr = 0;
-      for (let i = 0; i < n - period; i++) {
-        corr += buffer[i] * buffer[i + period];
-      }
-      corr = corr / (n - period);
+      const corr = this.autocorrAt(buffer, period, n);
       if (corr > bestCorr) {
         bestCorr = corr;
         bestPeriod = period;
@@ -109,8 +111,8 @@ export class AudioProcessor {
     const confidence = rmsSquared > 0 ? Math.min(bestCorr / rmsSquared, 1.0) : 0;
     if (confidence < 0.35) return null;
 
-    // Correção de oitava: verifica se metade do período tem correlação boa
-    // Se sim, a nota real está uma oitava acima
+    // Correção de oitava: verifica se metade do período tem correlação boa.
+    // Se sim, a nota real está uma oitava acima.
     const halfPeriod = Math.floor(bestPeriod / 2);
     if (halfPeriod >= minPeriod) {
       const halfCorr = this.autocorrAt(buffer, halfPeriod, n);
@@ -120,7 +122,7 @@ export class AudioProcessor {
       }
     }
 
-    // Refinamento parabólico
+    // Refinamento parabólico para precisão sub-sample
     let refinedPeriod = bestPeriod;
     if (bestPeriod > minPeriod && bestPeriod < maxPeriod) {
       const c0 = this.autocorrAt(buffer, bestPeriod - 1, n);
@@ -139,11 +141,13 @@ export class AudioProcessor {
   }
 
   private autocorrAt(buffer: Float32Array, period: number, n: number): number {
+    const len = n - period;
+    if (len <= 0) return 0;
     let corr = 0;
-    for (let i = 0; i < n - period; i++) {
+    for (let i = 0; i < len; i++) {
       corr += buffer[i] * buffer[i + period];
     }
-    return corr / (n - period);
+    return corr / len;
   }
 
   private calculateRMS(buffer: Float32Array): number {

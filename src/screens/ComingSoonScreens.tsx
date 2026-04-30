@@ -10,39 +10,17 @@ interface ComingSoonScreenProps {
 function ComingSoonScreen({ moduleName, description }: ComingSoonScreenProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>Em Desenvolvimento</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>{moduleName}</Text>
       </View>
-      <Text style={styles.title}>{moduleName}</Text>
-      <Text style={styles.description}>{description}</Text>
+
+      <View style={styles.body}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Em Desenvolvimento</Text>
+        </View>
+        <Text style={styles.description}>{description}</Text>
+      </View>
     </View>
-  );
-}
-
-export function MetronomeScreen() {
-  return (
-    <ComingSoonScreen
-      moduleName="Metrônomo"
-      description="Configure o tempo, compasso e subdivisions para seus estudos musicais."
-    />
-  );
-}
-
-export function ChordsScreen() {
-  return (
-    <ComingSoonScreen
-      moduleName="Acordes"
-      description="Biblioteca completa de acordes com diagrama de pestana e construção harmônica."
-    />
-  );
-}
-
-export function ScalesScreen() {
-  return (
-    <ComingSoonScreen
-      moduleName="Escalas"
-      description="Shapes e formas de escalas com notas, modos e aplicações práticas."
-    />
   );
 }
 
@@ -50,17 +28,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutral.lightGray,
+    paddingHorizontal: 24,
+    paddingTop: 64,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.secondary.darkBlue,
+  },
+  body: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
     gap: 16,
+    paddingBottom: 60,
   },
   badge: {
     backgroundColor: colors.secondary.darkBlue,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
     borderRadius: 20,
-    marginBottom: 8,
   },
   badgeText: {
     color: colors.neutral.white,
@@ -68,16 +59,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.secondary.darkBlue,
-    textAlign: 'center',
-  },
   description: {
     fontSize: 15,
     color: colors.neutral.mediumGray,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
+    maxWidth: 280,
   },
 });
