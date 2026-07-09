@@ -16,6 +16,21 @@ import { SCALE_SHAPES_C, ShapeData } from '../data/scaleShapesC';
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
 type NoteKey = typeof NOTES[number];
 
+const SOLFEGE: Record<NoteKey, string> = {
+  'C':  'Dó',
+  'C#': 'Dó#',
+  'D':  'Ré',
+  'Eb': 'Réb',
+  'E':  'Mi',
+  'F':  'Fá',
+  'F#': 'Fá#',
+  'G':  'Sol',
+  'Ab': 'Láb',
+  'A':  'Lá',
+  'Bb': 'Sib',
+  'B':  'Si',
+};
+
 const SCALES = [
   { name: 'major',            label: 'Maior'             },
   { name: 'minor',            label: 'Menor Natural'     },
@@ -95,7 +110,7 @@ export function ScalesScreen() {
         onPress={() => setTonicModalVisible(true)}
         activeOpacity={0.8}
       >
-        <Text style={styles.tonicButtonText}>{tonic}</Text>
+        <Text style={styles.tonicButtonText}>{SOLFEGE[tonic]}</Text>
       </TouchableOpacity>
 
       {/* Scale type chip */}
@@ -106,11 +121,6 @@ export function ScalesScreen() {
       >
         <Text style={styles.scaleChipText}>{SCALES[scaleIdx].label}</Text>
       </TouchableOpacity>
-
-      {/* Scale name */}
-      <Text style={styles.scaleName}>
-        {tonic} {SCALES[scaleIdx].label}
-      </Text>
 
       {/* Scale notes chips */}
       <View style={styles.notesRow}>
@@ -178,7 +188,7 @@ export function ScalesScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.noteGridText, tonic === n && styles.noteGridTextActive]}>
-                    {n}
+                    {SOLFEGE[n]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -252,9 +262,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tonicButton: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     backgroundColor: colors.neutral.white,
     borderWidth: 3,
     borderColor: colors.secondary.darkBlue,
@@ -267,7 +277,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   tonicButtonText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.secondary.darkBlue,
   },
@@ -325,6 +335,7 @@ const styles = StyleSheet.create({
   fretboardContainer: {
     alignItems: 'center',
     marginBottom: 8,
+    marginHorizontal: -24,
   },
   shapeIndicator: {
     fontSize: 14,

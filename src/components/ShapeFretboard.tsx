@@ -9,13 +9,15 @@ const STRING_PC: Record<string, number> = { e: 4, B: 11, G: 7, D: 2, A: 9, E: 4 
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 const N_SLOTS = 7;
-const PAD_LEFT = 22;
+const PAD_LEFT = 30;
 const PAD_TOP = 30;
-const PAD_RIGHT = 18;
+const PAD_RIGHT = 10;
 const PAD_BOT = 16;
-const FRET_W = 40;
-const STR_H = 32;
+const FRET_W = 46;
+const STR_H = 34;
 const DOT_R = 11;
+// Open-string circle sits left of the nut with a small gap (floating indicator, no string line through it)
+const OPEN_CX = PAD_LEFT - DOT_R - 5;
 
 export const SVG_W = PAD_LEFT + N_SLOTS * FRET_W + PAD_RIGHT;
 export const SVG_H = PAD_TOP + 5 * STR_H + PAD_BOT;
@@ -76,10 +78,8 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
       {STRING_ORDER.map((s, si) => {
         const y = strY(si);
         const isThick = s === 'E' || s === 'A' || s === 'D';
-        // Extend line left of nut when visible so open-string circles sit on the string
-        const x1 = isNutVisible ? PAD_LEFT - 18 : PAD_LEFT;
-        const labelX = isNutVisible ? 2 : PAD_LEFT - 4;
-        const labelAnchor = isNutVisible ? 'start' : 'end';
+        // String always starts at the nut; open circles are floating indicators to the left
+        const x1 = PAD_LEFT;
         return (
           <React.Fragment key={`str${s}`}>
             <Line
@@ -88,15 +88,17 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
               stroke="#B8B8B8"
               strokeWidth={isThick ? 2 : 1}
             />
-            <SvgText
-              x={labelX} y={y + 4}
-              textAnchor={labelAnchor}
-              fontSize={9}
-              fill={colors.neutral.mediumGray}
-              fontWeight="500"
-            >
-              {s}
-            </SvgText>
+            {!isNutVisible && (
+              <SvgText
+                x={PAD_LEFT - 4} y={y + 4}
+                textAnchor="end"
+                fontSize={9}
+                fill={colors.neutral.mediumGray}
+                fontWeight="500"
+              >
+                {s}
+              </SvgText>
+            )}
           </React.Fragment>
         );
       })}
@@ -118,7 +120,7 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
                 fill={isTonic ? colors.primary.orange : colors.secondary.darkBlue}
               />
               <SvgText
-                x={cx} y={cy + 4}
+                x={cx} y={cy + 3}
                 textAnchor="middle"
                 fontSize={9}
                 fontWeight="bold"
@@ -131,19 +133,31 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
         })
       )}
 
-      {/* Open string indicators (circles left of nut) */}
+      {/* Open string circles — same size as note dots, left of nut.
+          All 6 strings shown: gray + string name when not in scale,
+          blue/orange + note name when the scale uses that open string. */}
       {isNutVisible && STRING_ORDER.map((s, si) => {
-        if (!(shape[s] ?? []).includes(0)) return null;
+        const inShape = (shape[s] ?? []).includes(0);
         const pc = STRING_PC[s];
         const isTonic = pc === tonicPC;
+        const fill = inShape
+          ? (isTonic ? colors.primary.orange : colors.secondary.darkBlue)
+          : '#C4C4C4';
+        const label = inShape ? NOTE_NAMES[pc] : s;
+        const textFill = inShape ? 'white' : '#777777';
         return (
-          <Circle
-            key={`o${s}`}
-            cx={PAD_LEFT - 10} cy={strY(si)} r={5}
-            fill="none"
-            stroke={isTonic ? colors.primary.orange : colors.secondary.darkBlue}
-            strokeWidth={2}
-          />
+          <React.Fragment key={`o${s}`}>
+            <Circle cx={OPEN_CX} cy={strY(si)} r={DOT_R} fill={fill} />
+            <SvgText
+              x={OPEN_CX} y={strY(si) + 3}
+              textAnchor="middle"
+              fontSize={9}
+              fontWeight="bold"
+              fill={textFill}
+            >
+              {label}
+            </SvgText>
+          </React.Fragment>
         );
       })}
     </Svg>
