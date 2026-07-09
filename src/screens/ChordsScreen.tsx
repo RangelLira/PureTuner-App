@@ -1,149 +1,388 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import guitarData from '@tombatossals/chords-db/lib/guitar.json';
-import { ChordDiagram, ChordPosition } from '../components/ChordDiagram';
+import { FretboardBarre, ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
+import { CHORD_SHAPES_C, FretboardData, transposeChordShape } from '../data/chordShapesC';
+import { chordDescription, chordSuffixSymbol } from '../data/chordSuffixes';
+import type { ShapeData } from '../data/scaleShapesC';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const DIAGRAM_W = Math.floor((SCREEN_W - 64) / 2);
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
+export type ChordsNoteKey = typeof NOTES[number];
+type NoteKey = ChordsNoteKey;
 
-const NOTE_KEYS = [
-  { key: 'C',      label: 'C'  },
-  { key: 'Csharp', label: 'C#' },
-  { key: 'D',      label: 'D'  },
-  { key: 'Eb',     label: 'Eb' },
-  { key: 'E',      label: 'E'  },
-  { key: 'F',      label: 'F'  },
-  { key: 'Fsharp', label: 'F#' },
-  { key: 'G',      label: 'G'  },
-  { key: 'Ab',     label: 'Ab' },
-  { key: 'A',      label: 'A'  },
-  { key: 'Bb',     label: 'Bb' },
-  { key: 'B',      label: 'B'  },
-];
-
-const SUFFIXES = [
-  { key: 'major', label: 'Maior'  },
-  { key: 'minor', label: 'Menor'  },
-  { key: '7',     label: 'Dom.7'  },
-  { key: 'm7',    label: 'm7'     },
-  { key: 'maj7',  label: 'Maj7'   },
-  { key: 'sus2',  label: 'sus2'   },
-  { key: 'sus4',  label: 'sus4'   },
-  { key: 'dim',   label: 'dim'    },
-  { key: 'dim7',  label: 'dim7'   },
-  { key: 'aug',   label: 'aug'    },
-  { key: '6',     label: '6'      },
-  { key: '9',     label: '9'      },
-  { key: 'm9',    label: 'm9'     },
-  { key: 'm6',    label: 'm6'     },
-  { key: 'add9',  label: 'add9'   },
-];
-
-interface PositionItem {
-  id: string;
-  index: number;
-  position: ChordPosition;
+export interface ChordsState {
+  tonic: ChordsNoteKey;
+  suffixIdx: number;
+  posIdx: number;
 }
 
-export function ChordsScreen() {
-  const [noteIdx, setNoteIdx] = useState(0);
-  const [suffixIdx, setSuffixIdx] = useState(0);
+export const DEFAULT_CHORDS_STATE: ChordsState = { tonic: 'C', suffixIdx: 0, posIdx: 0 };
 
-  const selectedNote = NOTE_KEYS[noteIdx];
-  const selectedSuffix = SUFFIXES[suffixIdx];
+interface ChordsScreenProps {
+  state: ChordsState;
+  onStateChange: (patch: Partial<ChordsState>) => void;
+}
 
-  const positions = useMemo<PositionItem[]>(() => {
-    const chords = (guitarData as any).chords[selectedNote.key] as any[];
-    if (!chords) return [];
-    const match = chords.find((c: any) => c.suffix === selectedSuffix.key);
-    if (!match) return [];
-    return (match.positions as ChordPosition[]).map((p, i) => ({
-      id: `${selectedNote.key}-${selectedSuffix.key}-${i}`,
-      index: i,
-      position: p,
+// Chave usada pelo dicionário @tombatossals/chords-db para cada tom.
+const CHORD_DB_KEY: Record<NoteKey, string> = {
+  'C': 'C', 'C#': 'Csharp', 'D': 'D', 'D#': 'Eb', 'E': 'E', 'F': 'F',
+  'F#': 'Fsharp', 'G': 'G', 'G#': 'Ab', 'A': 'A', 'A#': 'Bb', 'B': 'B',
+};
+
+const STRINGS_LOW_TO_HIGH = ['E', 'A', 'D', 'G', 'B', 'e'] as const;
+const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+interface ChordPosition {
+  frets: number[];
+  fingers: number[];
+  baseFret: number;
+  barres: number[];
+  midi: number[];
+}
+
+interface ChordEntry {
+  key: string;
+  suffix: string;
+  positions: ChordPosition[];
+}
+
+interface SearchResult {
+  tonic: NoteKey;
+  suffix: string;
+  symbol: string;
+}
+
+// Lista achatada de todo tom × qualidade do dicionário, usada pela busca.
+// Calculada uma única vez a partir do JSON estático.
+const ALL_CHORDS: SearchResult[] = NOTES.flatMap(note => {
+  const dbKey = CHORD_DB_KEY[note];
+  const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
+  return entries.map(entry => ({
+    tonic: note,
+    suffix: entry.suffix,
+    symbol: `${note}${chordSuffixSymbol(entry.suffix)}`,
+  }));
+});
+
+function normalizeQuery(text: string) {
+  return text.toLowerCase().replace(/[\s()]+/g, '');
+}
+
+// Converte uma posição do dicionário (frets relativos ao baseFret, -1 = mudo)
+// para o mesmo formato de ShapeData usado pelas escalas, mais a lista de
+// cordas mudas e os grupos de pestana (mesmo traste em 2+ cordas). Usado como
+// fallback para qualidades de acorde sem os 5 shapes CAGED cadastrados.
+function positionToFretboardData(position: ChordPosition): FretboardData {
+  const shape: ShapeData = {};
+  const muted: string[] = [];
+  const barreGroups = new Map<number, string[]>();
+
+  position.frets.forEach((relFret, i) => {
+    const stringKey = STRINGS_LOW_TO_HIGH[i];
+    if (relFret === -1) {
+      muted.push(stringKey);
+      return;
+    }
+    if (relFret === 0) {
+      shape[stringKey] = [0];
+      return;
+    }
+    const abs = position.baseFret + relFret - 1;
+    shape[stringKey] = [abs];
+    if (position.barres.includes(relFret)) {
+      const arr = barreGroups.get(relFret) ?? [];
+      arr.push(stringKey);
+      barreGroups.set(relFret, arr);
+    }
+  });
+
+  const barres: FretboardBarre[] = Array.from(barreGroups.entries())
+    .filter(([, strings]) => strings.length >= 2)
+    .map(([relFret, strings]) => ({
+      fret: position.baseFret + relFret - 1,
+      strings,
     }));
-  }, [noteIdx, suffixIdx]);
 
-  const chordName = `${selectedNote.label} ${selectedSuffix.label}`;
+  return { shape, muted, barres };
+}
+
+function circleFontSize(text: string) {
+  if (text.length <= 2) return 28;
+  if (text.length <= 4) return 22;
+  if (text.length <= 7) return 17;
+  return 13;
+}
+
+function shapeMinFret(shape: ShapeData) {
+  const all = Object.values(shape).flat();
+  return all.length > 0 ? Math.min(...all) : 0;
+}
+
+export function ChordsScreen({ state, onStateChange }: ChordsScreenProps) {
+  const { tonic, suffixIdx, posIdx } = state;
+  const [tonicModalVisible, setTonicModalVisible] = useState(false);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const tonicPC = NOTES.indexOf(tonic);
+
+  const chordEntries = useMemo<ChordEntry[]>(() => {
+    const dbKey = CHORD_DB_KEY[tonic];
+    return ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
+  }, [tonic]);
+
+  const selectedEntry = chordEntries[suffixIdx];
+  const dbPositions = selectedEntry?.positions ?? [];
+
+  // Para as qualidades com os 5 shapes CAGED verificados, usamos esses shapes
+  // transpostos, ordenados do mais acessível (traste mais baixo — geralmente
+  // o mais usado/convencional) para o menos acessível. As demais qualidades
+  // caem no fallback com as posições do dicionário @tombatossals/chords-db.
+  const cagedShapes = selectedEntry ? CHORD_SHAPES_C[selectedEntry.suffix] : undefined;
+  const usesCaged = !!cagedShapes;
+  const currentDbPosition = dbPositions[posIdx];
+
+  const orderedCagedShapes = useMemo<FretboardData[]>(() => {
+    if (!cagedShapes) return [];
+    return cagedShapes
+      .map(template => transposeChordShape(template, tonicPC))
+      .sort((a, b) => shapeMinFret(a.shape) - shapeMinFret(b.shape));
+  }, [cagedShapes, tonicPC]);
+
+  const totalPositions = usesCaged ? orderedCagedShapes.length : dbPositions.length;
+
+  const chordName = selectedEntry ? `${tonic}${chordSuffixSymbol(selectedEntry.suffix)}` : tonic;
+  const description = selectedEntry ? chordDescription(selectedEntry.suffix) : '';
+
+  // Notas que compõem o acorde: união das classes de altura de todas as
+  // posições cadastradas para essa qualidade, ordenadas a partir da tônica.
+  const chordNotes = useMemo(() => {
+    if (!selectedEntry) return [];
+    const pcs = new Set<number>();
+    selectedEntry.positions.forEach(pos => pos.midi.forEach(m => pcs.add(m % 12)));
+    const order = Array.from({ length: 12 }, (_, i) => (tonicPC + i) % 12);
+    return order.filter(pc => pcs.has(pc)).map(pc => NOTE_NAMES[pc]);
+  }, [selectedEntry, tonicPC]);
+
+  const fretboardData = useMemo<FretboardData | null>(() => {
+    if (usesCaged) {
+      return orderedCagedShapes[posIdx] ?? null;
+    }
+    return currentDbPosition ? positionToFretboardData(currentDbPosition) : null;
+  }, [usesCaged, orderedCagedShapes, posIdx, currentDbPosition]);
+
+  const searchResults = useMemo(() => {
+    const query = normalizeQuery(searchQuery);
+    if (!query) return [];
+    return ALL_CHORDS.filter(c => normalizeQuery(c.symbol).startsWith(query)).slice(0, 60);
+  }, [searchQuery]);
+
+  const handleTonicSelect = (note: NoteKey) => {
+    // Mantém a mesma qualidade ao trocar só o tom (ex.: Dm -> B continua Bm),
+    // em vez de sempre voltar para a qualidade maior.
+    let newSuffixIdx = 0;
+    if (selectedEntry) {
+      const dbKey = CHORD_DB_KEY[note];
+      const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
+      const idx = entries.findIndex(e => e.suffix === selectedEntry.suffix);
+      if (idx >= 0) newSuffixIdx = idx;
+    }
+    onStateChange({ tonic: note, suffixIdx: newSuffixIdx, posIdx: 0 });
+    setTonicModalVisible(false);
+  };
+
+  const openSearchModal = () => {
+    setSearchQuery('');
+    setSearchModalVisible(true);
+  };
+
+  const handleSearchSelect = (result: SearchResult) => {
+    const dbKey = CHORD_DB_KEY[result.tonic];
+    const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
+    const idx = entries.findIndex(e => e.suffix === result.suffix);
+    onStateChange({ tonic: result.tonic, suffixIdx: idx >= 0 ? idx : 0, posIdx: 0 });
+    setSearchModalVisible(false);
+    setSearchQuery('');
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Acordes</Text>
 
-      {/* Note selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.selectorRow}
-        contentContainerStyle={styles.selectorContent}
+      {/* Tonic circle button — mostra o acorde completo (ex.: "Em7(b5)") */}
+      <TouchableOpacity
+        style={styles.tonicButton}
+        onPress={() => setTonicModalVisible(true)}
+        activeOpacity={0.8}
       >
-        {NOTE_KEYS.map((n, i) => (
-          <TouchableOpacity
-            key={n.key}
-            style={[styles.chip, i === noteIdx && styles.chipActive]}
-            onPress={() => setNoteIdx(i)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, i === noteIdx && styles.chipTextActive]}>
-              {n.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        <Text style={[styles.tonicButtonText, { fontSize: circleFontSize(chordName) }]}>
+          {chordName}
+        </Text>
+      </TouchableOpacity>
 
-      {/* Suffix selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.selectorRow}
-        contentContainerStyle={styles.selectorContent}
+      {/* Search chip — abre a busca de acordes do dicionário */}
+      <TouchableOpacity
+        style={styles.searchChip}
+        onPress={openSearchModal}
+        activeOpacity={0.8}
       >
-        {SUFFIXES.map((s, i) => (
-          <TouchableOpacity
-            key={s.key}
-            style={[styles.chip, i === suffixIdx && styles.chipActive]}
-            onPress={() => setSuffixIdx(i)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, i === suffixIdx && styles.chipTextActive]}>
-              {s.label}
-            </Text>
-          </TouchableOpacity>
+        <Text style={styles.searchChipText}>Buscar acorde</Text>
+      </TouchableOpacity>
+
+      {/* Chord notes chips */}
+      <View style={styles.notesRow}>
+        {chordNotes.map((n, i) => (
+          <View key={`${n}${i}`} style={[styles.noteChip, i === 0 && styles.noteChipTonic]}>
+            <Text style={styles.noteChipText}>{n}</Text>
+          </View>
         ))}
-      </ScrollView>
+      </View>
 
-      {/* Chord name */}
-      <Text style={styles.chordName}>{chordName}</Text>
+      {/* Description */}
+      <Text style={styles.description} numberOfLines={4}>{description}</Text>
 
-      {/* Chord grid */}
-      {positions.length === 0 ? (
+      {/* Chord fretboard */}
+      {fretboardData ? (
+        <>
+          <View style={styles.fretboardContainer}>
+            <ShapeFretboard
+              shape={fretboardData.shape}
+              tonicPC={tonicPC}
+              barres={fretboardData.barres}
+              mutedStrings={fretboardData.muted}
+            />
+          </View>
+          <Text style={styles.shapeIndicator}>{posIdx + 1} / {totalPositions}</Text>
+        </>
+      ) : (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>Acorde não disponível</Text>
         </View>
-      ) : (
-        <FlatList
-          data={positions}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <ChordDiagram position={item.position} width={DIAGRAM_W} />
-              <Text style={styles.posLabel}>Posição {item.index + 1}</Text>
-            </View>
-          )}
-        />
       )}
+
+      {/* Push nav buttons to same vertical position as TunerScreen's Iniciar */}
+      <View style={{ flex: 1 }} />
+
+      {/* Navigation buttons */}
+      <View style={styles.navRow}>
+        <TouchableOpacity
+          style={[styles.navButton, posIdx === 0 && styles.navButtonDisabled]}
+          onPress={() => onStateChange({ posIdx: Math.max(0, posIdx - 1) })}
+          activeOpacity={0.8}
+          disabled={posIdx === 0}
+        >
+          <Text style={styles.navButtonText}>Anterior</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.navButton, posIdx >= totalPositions - 1 && styles.navButtonDisabled]}
+          onPress={() => onStateChange({ posIdx: Math.min(totalPositions - 1, posIdx + 1) })}
+          activeOpacity={0.8}
+          disabled={posIdx >= totalPositions - 1}
+        >
+          <Text style={styles.navButtonText}>Próxima</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tonic selector modal */}
+      <Modal
+        visible={tonicModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTonicModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setTonicModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.tonicModalCard} activeOpacity={1}>
+            <Text style={styles.modalTitle}>Escolha o Tom</Text>
+            <View style={styles.notesGrid}>
+              {NOTES.map(n => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.noteGridChip, tonic === n && styles.noteGridChipActive]}
+                  onPress={() => handleTonicSelect(n)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.noteGridText, tonic === n && styles.noteGridTextActive]}>
+                    {n}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setTonicModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Chord search modal */}
+      <Modal
+        visible={searchModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSearchModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSearchModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.scaleModalCard} activeOpacity={1}>
+            <Text style={styles.modalTitle}>Buscar Acorde</Text>
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Ex.: C, Em7(b5), F#m..."
+              placeholderTextColor={colors.neutral.mediumGray}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <ScrollView style={styles.scaleList} showsVerticalScrollIndicator={false}>
+              {searchQuery.trim().length === 0 ? (
+                <Text style={styles.searchHint}>Digite o nome de um acorde para buscar.</Text>
+              ) : searchResults.length === 0 ? (
+                <Text style={styles.searchHint}>Acorde não encontrado.</Text>
+              ) : (
+                searchResults.map((result, i) => (
+                  <TouchableOpacity
+                    key={`${result.tonic}-${result.suffix}-${i}`}
+                    style={styles.scaleListItem}
+                    onPress={() => handleSearchSelect(result)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.scaleListText}>{result.symbol}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setSearchModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -152,7 +391,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutral.lightGray,
-    paddingTop: 64,
+    paddingTop: 56,
+    paddingHorizontal: 24,
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
@@ -161,74 +402,223 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  selectorRow: {
-    flexGrow: 0,
-    marginBottom: 8,
-  },
-  selectorContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  tonicButton: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     backgroundColor: colors.neutral.white,
-    borderWidth: 1.5,
-    borderColor: '#D0D0D0',
-  },
-  chipActive: {
-    backgroundColor: colors.secondary.darkBlue,
+    borderWidth: 3,
     borderColor: colors.secondary.darkBlue,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.secondary.darkBlue,
-  },
-  chipTextActive: {
-    color: colors.neutral.white,
-  },
-  chordName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary.orange,
-    textAlign: 'center',
-    marginVertical: 12,
-  },
-  row: {
-    justifyContent: 'center',
-    gap: 12,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    gap: 12,
-  },
-  card: {
-    backgroundColor: colors.neutral.white,
-    borderRadius: 12,
-    padding: 12,
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    justifyContent: 'center',
+    marginBottom: 12,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
     shadowRadius: 4,
   },
-  posLabel: {
-    marginTop: 6,
-    fontSize: 11,
-    color: colors.neutral.mediumGray,
+  tonicButtonText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.secondary.darkBlue,
+    textAlign: 'center',
+  },
+  searchChip: {
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: colors.secondary.darkBlue,
+    marginBottom: 16,
+    minWidth: '60%',
+    alignItems: 'center',
+  },
+  searchChipText: {
+    fontSize: 17,
     fontWeight: '600',
+    color: colors.neutral.white,
+  },
+  notesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  noteChip: {
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: colors.secondary.darkBlue,
+  },
+  noteChipTonic: {
+    backgroundColor: colors.primary.orange,
+  },
+  noteChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.neutral.white,
+  },
+  description: {
+    fontSize: 13,
+    color: colors.secondary.mediumBlue,
+    textAlign: 'center',
+    lineHeight: 19,
+    height: 76,
+    marginBottom: 14,
+  },
+  fretboardContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+    marginHorizontal: -24,
+  },
+  shapeIndicator: {
+    fontSize: 14,
+    color: colors.neutral.mediumGray,
+    fontWeight: '500',
+    marginBottom: 8,
   },
   empty: {
-    flex: 1,
+    paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyText: {
     fontSize: 15,
     color: colors.neutral.mediumGray,
+  },
+  navRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingBottom: 40,
+    width: '100%',
+  },
+  navButton: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 32,
+    backgroundColor: colors.primary.orange,
+    alignItems: 'center',
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  navButtonDisabled: {
+    backgroundColor: colors.neutral.mediumGray,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  navButtonText: {
+    color: colors.neutral.white,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tonicModalCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    width: '86%',
+    alignItems: 'center',
+  },
+  scaleModalCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 8,
+    width: '86%',
+    maxHeight: '68%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.secondary.darkBlue,
+    marginBottom: 18,
+  },
+  notesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  noteGridChip: {
+    width: 56,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: colors.neutral.lightGray,
+    borderWidth: 1.5,
+    borderColor: '#D0D0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteGridChipActive: {
+    backgroundColor: colors.secondary.darkBlue,
+    borderColor: colors.secondary.darkBlue,
+  },
+  noteGridText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.secondary.darkBlue,
+  },
+  noteGridTextActive: {
+    color: colors.neutral.white,
+  },
+  searchInput: {
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: '#D0D0D0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: colors.secondary.darkBlue,
+    marginBottom: 14,
+  },
+  searchHint: {
+    fontSize: 14,
+    color: colors.neutral.mediumGray,
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  scaleList: {
+    width: '100%',
+  },
+  scaleListItem: {
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 2,
+  },
+  scaleListItemActive: {
+    backgroundColor: colors.secondary.darkBlue,
+  },
+  scaleListText: {
+    fontSize: 16,
+    color: colors.secondary.darkBlue,
+    fontWeight: '500',
+  },
+  scaleListTextActive: {
+    color: colors.neutral.white,
+    fontWeight: '700',
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  cancelText: {
+    fontSize: 14,
+    color: colors.neutral.mediumGray,
+    fontWeight: '600',
   },
 });

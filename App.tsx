@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import { colors } from './src/constants/colors';
 import { AboutModal } from './src/screens/AboutScreen';
-import { ChordsScreen } from './src/screens/ChordsScreen';
+import { ChordsScreen, ChordsState, DEFAULT_CHORDS_STATE } from './src/screens/ChordsScreen';
 import { MetronomeScreen } from './src/screens/MetronomeScreen';
-import { ScalesScreen } from './src/screens/ScalesScreen';
+import { DEFAULT_SCALES_STATE, ScalesScreen, ScalesState } from './src/screens/ScalesScreen';
 import { TunerScreen } from './src/screens/TunerScreen';
 
 type TabName = 'tuner' | 'metronome' | 'chords' | 'scales';
@@ -28,22 +28,36 @@ const TABS: Tab[] = [
   { name: 'scales', label: 'Escalas', icon: '🎼' },
 ];
 
-function renderScreen(tab: TabName) {
-  switch (tab) {
-    case 'tuner':
-      return <TunerScreen />;
-    case 'metronome':
-      return <MetronomeScreen />;
-    case 'chords':
-      return <ChordsScreen />;
-    case 'scales':
-      return <ScalesScreen />;
-  }
-}
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabName>('tuner');
   const [showAbout, setShowAbout] = useState(false);
+
+  // Estado das telas de Acordes e Escalas fica aqui (não dentro das telas)
+  // para sobreviver à troca de abas — as telas são desmontadas ao trocar de
+  // aba, então guardar o estado localmente nelas faria a seleção do usuário
+  // voltar ao padrão (Dó) toda vez. Como é estado em memória (não persistido
+  // em disco), ele volta ao padrão sozinho quando o app é fechado de verdade
+  // ou reinstalado.
+  const [chordsState, setChordsState] = useState<ChordsState>(DEFAULT_CHORDS_STATE);
+  const [scalesState, setScalesState] = useState<ScalesState>(DEFAULT_SCALES_STATE);
+
+  const updateChordsState = (patch: Partial<ChordsState>) =>
+    setChordsState(prev => ({ ...prev, ...patch }));
+  const updateScalesState = (patch: Partial<ScalesState>) =>
+    setScalesState(prev => ({ ...prev, ...patch }));
+
+  function renderScreen(tab: TabName) {
+    switch (tab) {
+      case 'tuner':
+        return <TunerScreen />;
+      case 'metronome':
+        return <MetronomeScreen />;
+      case 'chords':
+        return <ChordsScreen state={chordsState} onStateChange={updateChordsState} />;
+      case 'scales':
+        return <ScalesScreen state={scalesState} onStateChange={updateScalesState} />;
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

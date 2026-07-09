@@ -22,7 +22,19 @@ const OPEN_CX = PAD_LEFT - DOT_R - 5;
 export const SVG_W = PAD_LEFT + N_SLOTS * FRET_W + PAD_RIGHT;
 export const SVG_H = PAD_TOP + 5 * STR_H + PAD_BOT;
 
-export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: number }) {
+export interface FretboardBarre {
+  fret: number;
+  strings: string[];
+}
+
+interface Props {
+  shape: ShapeData;
+  tonicPC: number;
+  barres?: FretboardBarre[];
+  mutedStrings?: string[];
+}
+
+export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) {
   const allFrets = Object.values(shape).flat();
   const nonOpenFrets = allFrets.filter(f => f > 0);
   const hasOpen = allFrets.some(f => f === 0);
@@ -89,17 +101,53 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
               strokeWidth={isThick ? 2 : 1}
             />
             {!isNutVisible && (
-              <SvgText
-                x={PAD_LEFT - 4} y={y + 4}
-                textAnchor="end"
-                fontSize={9}
-                fill={colors.neutral.mediumGray}
-                fontWeight="500"
-              >
-                {s}
-              </SvgText>
+              mutedStrings?.includes(s) ? (
+                <SvgText
+                  x={PAD_LEFT - 4} y={y + 4}
+                  textAnchor="end"
+                  fontSize={11}
+                  fontWeight="bold"
+                  fill={colors.status.error}
+                >
+                  ×
+                </SvgText>
+              ) : (
+                <SvgText
+                  x={PAD_LEFT - 4} y={y + 4}
+                  textAnchor="end"
+                  fontSize={9}
+                  fill={colors.neutral.mediumGray}
+                  fontWeight="500"
+                >
+                  {s}
+                </SvgText>
+              )
             )}
           </React.Fragment>
+        );
+      })}
+
+      {/* Barre bars — drawn beneath the note dots so finger dots layer on top */}
+      {barres?.map((b, bi) => {
+        const sis = b.strings
+          .map(s => STRING_ORDER.indexOf(s as typeof STRING_ORDER[number]))
+          .filter(i => i >= 0);
+        if (sis.length < 2) return null;
+        const slot = b.fret - windowBase;
+        if (slot < 0 || slot >= N_SLOTS) return null;
+        const cx = slotCX(slot);
+        const yFrom = strY(Math.min(...sis));
+        const yTo = strY(Math.max(...sis));
+        return (
+          <Rect
+            key={`barre${bi}`}
+            x={cx - DOT_R}
+            y={yFrom - DOT_R}
+            width={DOT_R * 2}
+            height={yTo - yFrom + DOT_R * 2}
+            rx={DOT_R}
+            fill={colors.secondary.darkBlue}
+          />
         );
       })}
 
@@ -137,17 +185,25 @@ export function ShapeFretboard({ shape, tonicPC }: { shape: ShapeData; tonicPC: 
           All 6 strings shown: gray + string name when not in scale,
           blue/orange + note name when the scale uses that open string. */}
       {isNutVisible && STRING_ORDER.map((s, si) => {
+        const isMuted = mutedStrings?.includes(s) ?? false;
         const inShape = (shape[s] ?? []).includes(0);
         const pc = STRING_PC[s];
         const isTonic = pc === tonicPC;
-        const fill = inShape
+        const fill = isMuted
+          ? colors.neutral.white
+          : inShape
           ? (isTonic ? colors.primary.orange : colors.secondary.darkBlue)
           : '#C4C4C4';
-        const label = inShape ? NOTE_NAMES[pc] : s;
-        const textFill = inShape ? 'white' : '#777777';
+        const label = isMuted ? '×' : inShape ? NOTE_NAMES[pc] : s;
+        const textFill = isMuted ? colors.status.error : inShape ? 'white' : '#777777';
         return (
           <React.Fragment key={`o${s}`}>
-            <Circle cx={OPEN_CX} cy={strY(si)} r={DOT_R} fill={fill} />
+            <Circle
+              cx={OPEN_CX} cy={strY(si)} r={DOT_R}
+              fill={fill}
+              stroke={isMuted ? colors.status.error : 'none'}
+              strokeWidth={isMuted ? 1.5 : 0}
+            />
             <SvgText
               x={OPEN_CX} y={strY(si) + 3}
               textAnchor="middle"

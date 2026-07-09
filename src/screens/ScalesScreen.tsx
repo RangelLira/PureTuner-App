@@ -14,9 +14,22 @@ import { SCALE_DESCRIPTIONS } from '../data/scaleDescriptions';
 import { SCALE_SHAPES_C, ShapeData } from '../data/scaleShapesC';
 
 const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
-type NoteKey = typeof NOTES[number];
+export type ScalesNoteKey = typeof NOTES[number];
 
-const SOLFEGE: Record<NoteKey, string> = {
+export interface ScalesState {
+  tonic: ScalesNoteKey;
+  scaleIdx: number;
+  shapeIdx: number;
+}
+
+export const DEFAULT_SCALES_STATE: ScalesState = { tonic: 'C', scaleIdx: 0, shapeIdx: 0 };
+
+interface ScalesScreenProps {
+  state: ScalesState;
+  onStateChange: (patch: Partial<ScalesState>) => void;
+}
+
+const SOLFEGE: Record<ScalesNoteKey, string> = {
   'C':  'Dó',
   'C#': 'Dó#',
   'D':  'Ré',
@@ -64,10 +77,8 @@ function transposeShape(shape: ShapeData, tonicPC: number): ShapeData {
   return result;
 }
 
-export function ScalesScreen() {
-  const [tonic, setTonic] = useState<NoteKey>('C');
-  const [scaleIdx, setScaleIdx] = useState(0);
-  const [shapeIdx, setShapeIdx] = useState(0);
+export function ScalesScreen({ state, onStateChange }: ScalesScreenProps) {
+  const { tonic, scaleIdx, shapeIdx } = state;
   const [tonicModalVisible, setTonicModalVisible] = useState(false);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
 
@@ -86,15 +97,13 @@ export function ScalesScreen() {
     return transposeShape(base, tonicPC);
   }, [scaleIdx, shapeIdx, tonicPC]);
 
-  const handleTonicSelect = (note: NoteKey) => {
-    setTonic(note);
-    setShapeIdx(0);
+  const handleTonicSelect = (note: ScalesNoteKey) => {
+    onStateChange({ tonic: note, shapeIdx: 0 });
     setTonicModalVisible(false);
   };
 
   const handleScaleSelect = (idx: number) => {
-    setScaleIdx(idx);
-    setShapeIdx(0);
+    onStateChange({ scaleIdx: idx, shapeIdx: 0 });
     setScaleModalVisible(false);
   };
 
@@ -149,7 +158,7 @@ export function ScalesScreen() {
       <View style={styles.navRow}>
         <TouchableOpacity
           style={[styles.navButton, shapeIdx === 0 && styles.navButtonDisabled]}
-          onPress={() => setShapeIdx(i => Math.max(0, i - 1))}
+          onPress={() => onStateChange({ shapeIdx: Math.max(0, shapeIdx - 1) })}
           activeOpacity={0.8}
           disabled={shapeIdx === 0}
         >
@@ -157,7 +166,7 @@ export function ScalesScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navButton, shapeIdx === totalShapes - 1 && styles.navButtonDisabled]}
-          onPress={() => setShapeIdx(i => Math.min(totalShapes - 1, i + 1))}
+          onPress={() => onStateChange({ shapeIdx: Math.min(totalShapes - 1, shapeIdx + 1) })}
           activeOpacity={0.8}
           disabled={shapeIdx === totalShapes - 1}
         >
@@ -285,9 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 24,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 2,
-    borderColor: colors.secondary.darkBlue,
+    backgroundColor: colors.secondary.darkBlue,
     marginBottom: 16,
     minWidth: '60%',
     alignItems: 'center',
@@ -295,7 +302,7 @@ const styles = StyleSheet.create({
   scaleChipText: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.secondary.darkBlue,
+    color: colors.neutral.white,
   },
   scaleName: {
     fontSize: 21,
@@ -330,6 +337,7 @@ const styles = StyleSheet.create({
     color: colors.secondary.mediumBlue,
     textAlign: 'center',
     lineHeight: 19,
+    height: 76,
     marginBottom: 14,
   },
   fretboardContainer: {
