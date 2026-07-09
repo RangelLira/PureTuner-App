@@ -1,226 +1,111 @@
 import { Note, Scale } from '@tonaljs/tonal';
 import React, { useMemo, useState } from 'react';
 import {
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Svg, { Circle, Line, Rect, Text as SvgText } from 'react-native-svg';
+import { ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
+import { SCALE_DESCRIPTIONS } from '../data/scaleDescriptions';
+import { SCALE_SHAPES_C, ShapeData } from '../data/scaleShapesC';
 
-const NOTES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'] as const;
+const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
 type NoteKey = typeof NOTES[number];
 
 const SCALES = [
-  { name: 'major pentatonic',  label: 'Pentatônica Maior'   },
-  { name: 'minor pentatonic',  label: 'Pentatônica Menor'   },
-  { name: 'major',             label: 'Maior (Jônia)'       },
-  { name: 'minor',             label: 'Menor Natural'       },
-  { name: 'major blues',       label: 'Blues Maior'         },
-  { name: 'minor blues',       label: 'Blues Menor'         },
-  { name: 'harmonic minor',    label: 'Menor Harmônica'     },
-  { name: 'melodic minor',     label: 'Menor Melódica'      },
-  { name: 'dorian',            label: 'Dórica'              },
-  { name: 'mixolydian',        label: 'Mixolídia'           },
-  { name: 'phrygian',          label: 'Frígia'              },
-  { name: 'lydian',            label: 'Lídia'               },
-  { name: 'diminished',        label: 'Diminuta'            },
-  { name: 'whole tone',        label: 'Tons Inteiros'       },
-];
+  { name: 'major',            label: 'Maior'             },
+  { name: 'minor',            label: 'Menor Natural'     },
+  { name: 'melodic minor',    label: 'Menor Melódica'    },
+  { name: 'harmonic minor',   label: 'Menor Harmônica'   },
+  { name: 'major pentatonic', label: 'Pentatônica Maior' },
+  { name: 'minor pentatonic', label: 'Pentatônica Menor' },
+  { name: 'major blues',      label: 'Blues Maior'       },
+  { name: 'minor blues',      label: 'Blues Menor'       },
+  { name: 'ionian',           label: 'Jônio'             },
+  { name: 'dorian',           label: 'Dórico'            },
+  { name: 'phrygian',         label: 'Frígio'            },
+  { name: 'lydian',           label: 'Lídio'             },
+  { name: 'mixolydian',       label: 'Mixolídio'         },
+  { name: 'aeolian',          label: 'Eólio'             },
+  { name: 'locrian',             label: 'Lócrio'            },
+  { name: 'double harmonic major', label: 'Árabe'          },
+] as const;
 
-// Standard tuning pitch classes (low E → high e)
-const TUNING = [4, 9, 2, 7, 11, 4] as const;
-const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'e'];
-const FRET_MARKERS = new Set([3, 5, 7, 9]);
-const DOUBLE_MARKERS = new Set([12]);
-const SHOW_FRETS = 12;
-
-// Fretboard SVG constants
-const FRET_W = 46;
-const STRING_H = 24;
-const SVG_PAD_T = 20;
-const SVG_PAD_B = 24;
-const NUT_W = 36;
-const DOT_R = 9;
-const SVG_W = NUT_W + SHOW_FRETS * FRET_W + 4;
-const SVG_H = SVG_PAD_T + 5 * STRING_H + SVG_PAD_B;
-
-function strY(s: number) {
-  return SVG_PAD_T + s * STRING_H;
-}
-function fretCX(f: number) {
-  if (f === 0) return NUT_W / 2;
-  return NUT_W + (f - 0.5) * FRET_W;
-}
-
-interface FretboardProps {
-  scalePCs: Set<number>;
-  tonicPC: number;
-  pcToName: Map<number, string>;
-}
-
-function Fretboard({ scalePCs, tonicPC, pcToName }: FretboardProps) {
-  return (
-    <Svg width={SVG_W} height={SVG_H} viewBox={`0 0 ${SVG_W} ${SVG_H}`}>
-      {/* Fret lines */}
-      {Array.from({ length: SHOW_FRETS + 1 }, (_, f) => {
-        const x = NUT_W + f * FRET_W;
-        return (
-          <Line
-            key={`fl${f}`}
-            x1={x} y1={SVG_PAD_T}
-            x2={x} y2={SVG_PAD_T + 5 * STRING_H}
-            stroke={f === 0 ? '#2C3E50' : '#C0C0C0'}
-            strokeWidth={f === 0 ? 4 : 1.5}
-          />
-        );
-      })}
-
-      {/* String lines */}
-      {Array.from({ length: 6 }, (_, s) => {
-        const y = strY(s);
-        return (
-          <React.Fragment key={`str${s}`}>
-            <Line
-              x1={0} y1={y}
-              x2={SVG_W} y2={y}
-              stroke="#B0B0B0"
-              strokeWidth={s === 0 || s === 5 ? 2 : 1}
-            />
-            <SvgText
-              x={NUT_W / 2}
-              y={y + 5}
-              textAnchor="middle"
-              fontSize={10}
-              fill="#7F8C8D"
-            >
-              {STRING_NAMES[s]}
-            </SvgText>
-          </React.Fragment>
-        );
-      })}
-
-      {/* Fret position markers */}
-      {Array.from({ length: SHOW_FRETS }, (_, i) => {
-        const f = i + 1;
-        const cx = NUT_W + (f - 0.5) * FRET_W;
-        const by = SVG_PAD_T + 5 * STRING_H + 12;
-        if (DOUBLE_MARKERS.has(f)) {
-          return (
-            <React.Fragment key={`mk${f}`}>
-              <Circle cx={cx - 5} cy={by} r={3} fill="#C0C0C0" />
-              <Circle cx={cx + 5} cy={by} r={3} fill="#C0C0C0" />
-            </React.Fragment>
-          );
-        }
-        if (FRET_MARKERS.has(f)) {
-          return <Circle key={`mk${f}`} cx={cx} cy={by} r={3} fill="#C0C0C0" />;
-        }
-        return null;
-      })}
-
-      {/* Note dots */}
-      {Array.from({ length: 6 }, (_, s) =>
-        Array.from({ length: SHOW_FRETS + 1 }, (_, f) => {
-          const pc = (TUNING[s] + f) % 12;
-          if (!scalePCs.has(pc)) return null;
-          const cx = fretCX(f);
-          const cy = strY(s);
-          const isTonic = pc === tonicPC;
-          const noteName = pcToName.get(pc) ?? '';
-          return (
-            <React.Fragment key={`n${s}-${f}`}>
-              <Circle
-                cx={cx}
-                cy={cy}
-                r={DOT_R}
-                fill={isTonic ? colors.primary.orange : colors.secondary.darkBlue}
-              />
-              <SvgText
-                x={cx}
-                y={cy + 4}
-                textAnchor="middle"
-                fontSize={9}
-                fontWeight="bold"
-                fill="white"
-              >
-                {noteName}
-              </SvgText>
-            </React.Fragment>
-          );
-        })
-      )}
-    </Svg>
-  );
+// Transpose shape from key C (tonicPC=0) to any key.
+// Each fret shifts by tonicPC. If the result would exceed fret 22, shift down one octave.
+function transposeShape(shape: ShapeData, tonicPC: number): ShapeData {
+  if (tonicPC === 0) { return shape; }
+  const allFrets = Object.values(shape).flat();
+  const maxFret = allFrets.length > 0 ? Math.max(...allFrets) : 0;
+  const offset = maxFret + tonicPC > 22 ? tonicPC - 12 : tonicPC;
+  const result: ShapeData = {};
+  for (const [str, frets] of Object.entries(shape)) {
+    result[str] = frets.map(f => f + offset);
+  }
+  return result;
 }
 
 export function ScalesScreen() {
-  const [tonic, setTonic] = useState<NoteKey>('A');
+  const [tonic, setTonic] = useState<NoteKey>('C');
   const [scaleIdx, setScaleIdx] = useState(0);
+  const [shapeIdx, setShapeIdx] = useState(0);
+  const [tonicModalVisible, setTonicModalVisible] = useState(false);
+  const [scaleModalVisible, setScaleModalVisible] = useState(false);
 
-  const { scalePCs, tonicPC, pcToName, scaleNotes } = useMemo(() => {
+  const { tonicPC, scaleNotes } = useMemo(() => {
     const sel = SCALES[scaleIdx];
     const result = Scale.get(`${tonic} ${sel.name}`);
     const tp = Note.chroma(tonic) ?? 0;
-    const pcs = new Set<number>();
-    const nameMap = new Map<number, string>();
-    result.notes.forEach(n => {
-      const pc = Note.chroma(n);
-      if (pc !== undefined) {
-        pcs.add(pc);
-        nameMap.set(pc, n);
-      }
-    });
-    return { scalePCs: pcs, tonicPC: tp, pcToName: nameMap, scaleNotes: result.notes };
+    return { tonicPC: tp, scaleNotes: result.notes };
   }, [tonic, scaleIdx]);
+
+  const totalShapes = 5;
+
+  const currentShape = useMemo(() => {
+    const allShapes = SCALE_SHAPES_C[SCALES[scaleIdx].name] ?? [];
+    const base = allShapes[shapeIdx] ?? {};
+    return transposeShape(base, tonicPC);
+  }, [scaleIdx, shapeIdx, tonicPC]);
+
+  const handleTonicSelect = (note: NoteKey) => {
+    setTonic(note);
+    setShapeIdx(0);
+    setTonicModalVisible(false);
+  };
+
+  const handleScaleSelect = (idx: number) => {
+    setScaleIdx(idx);
+    setShapeIdx(0);
+    setScaleModalVisible(false);
+  };
+
+  const description = SCALE_DESCRIPTIONS[SCALES[scaleIdx].name] ?? '';
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Escalas</Text>
 
-      {/* Tonic selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.selectorRow}
-        contentContainerStyle={styles.selectorContent}
+      {/* Tonic circle button */}
+      <TouchableOpacity
+        style={styles.tonicButton}
+        onPress={() => setTonicModalVisible(true)}
+        activeOpacity={0.8}
       >
-        {NOTES.map(n => (
-          <TouchableOpacity
-            key={n}
-            style={[styles.chip, tonic === n && styles.chipActive]}
-            onPress={() => setTonic(n)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, tonic === n && styles.chipTextActive]}>
-              {n}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        <Text style={styles.tonicButtonText}>{tonic}</Text>
+      </TouchableOpacity>
 
-      {/* Scale selector */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.selectorRow}
-        contentContainerStyle={styles.selectorContent}
+      {/* Scale type chip */}
+      <TouchableOpacity
+        style={styles.scaleChip}
+        onPress={() => setScaleModalVisible(true)}
+        activeOpacity={0.8}
       >
-        {SCALES.map((s, i) => (
-          <TouchableOpacity
-            key={s.name}
-            style={[styles.chip, i === scaleIdx && styles.chipActive]}
-            onPress={() => setScaleIdx(i)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, i === scaleIdx && styles.chipTextActive]}>
-              {s.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        <Text style={styles.scaleChipText}>{SCALES[scaleIdx].label}</Text>
+      </TouchableOpacity>
 
       {/* Scale name */}
       <Text style={styles.scaleName}>
@@ -231,39 +116,122 @@ export function ScalesScreen() {
       <View style={styles.notesRow}>
         {scaleNotes.map((n, i) => (
           <View key={`${n}${i}`} style={[styles.noteChip, i === 0 && styles.noteChipTonic]}>
-            <Text style={[styles.noteChipText, i === 0 && styles.noteChipTextTonic]}>
-              {n}
-            </Text>
+            <Text style={styles.noteChipText}>{n}</Text>
           </View>
         ))}
       </View>
 
-      {/* Fretboard (scrollable horizontally) */}
-      <Text style={styles.fretboardLabel}>Braço — corda 6 (baixo) ao topo</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.fretboardScroll}
-        contentContainerStyle={styles.fretboardContent}
-      >
-        <Fretboard
-          scalePCs={scalePCs}
-          tonicPC={tonicPC}
-          pcToName={pcToName}
-        />
-      </ScrollView>
+      {/* Description */}
+      <Text style={styles.description} numberOfLines={4}>{description}</Text>
 
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.primary.orange }]} />
-          <Text style={styles.legendText}>Tônica</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.secondary.darkBlue }]} />
-          <Text style={styles.legendText}>Nota da escala</Text>
-        </View>
+      {/* Shape fretboard */}
+      <View style={styles.fretboardContainer}>
+        <ShapeFretboard shape={currentShape} tonicPC={tonicPC} />
       </View>
+
+      {/* Shape indicator */}
+      <Text style={styles.shapeIndicator}>{shapeIdx + 1} / {totalShapes}</Text>
+
+      {/* Push nav buttons to same vertical position as TunerScreen's Iniciar */}
+      <View style={{ flex: 1 }} />
+
+      {/* Navigation buttons */}
+      <View style={styles.navRow}>
+        <TouchableOpacity
+          style={[styles.navButton, shapeIdx === 0 && styles.navButtonDisabled]}
+          onPress={() => setShapeIdx(i => Math.max(0, i - 1))}
+          activeOpacity={0.8}
+          disabled={shapeIdx === 0}
+        >
+          <Text style={styles.navButtonText}>Anterior</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.navButton, shapeIdx === totalShapes - 1 && styles.navButtonDisabled]}
+          onPress={() => setShapeIdx(i => Math.min(totalShapes - 1, i + 1))}
+          activeOpacity={0.8}
+          disabled={shapeIdx === totalShapes - 1}
+        >
+          <Text style={styles.navButtonText}>Próxima</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tonic selector modal */}
+      <Modal
+        visible={tonicModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTonicModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setTonicModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.tonicModalCard} activeOpacity={1}>
+            <Text style={styles.modalTitle}>Escolha o Tom</Text>
+            <View style={styles.notesGrid}>
+              {NOTES.map(n => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.noteGridChip, tonic === n && styles.noteGridChipActive]}
+                  onPress={() => handleTonicSelect(n)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.noteGridText, tonic === n && styles.noteGridTextActive]}>
+                    {n}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setTonicModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Scale type selector modal */}
+      <Modal
+        visible={scaleModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setScaleModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setScaleModalVisible(false)}
+        >
+          <TouchableOpacity style={styles.scaleModalCard} activeOpacity={1}>
+            <Text style={styles.modalTitle}>Tipo de Escala</Text>
+            <ScrollView style={styles.scaleList} showsVerticalScrollIndicator={false}>
+              {SCALES.map((s, i) => (
+                <TouchableOpacity
+                  key={s.name}
+                  style={[styles.scaleListItem, i === scaleIdx && styles.scaleListItemActive]}
+                  onPress={() => handleScaleSelect(i)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.scaleListText, i === scaleIdx && styles.scaleListTextActive]}>
+                    {s.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setScaleModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -272,7 +240,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutral.lightGray,
-    paddingTop: 64,
+    paddingTop: 56,
+    paddingHorizontal: 24,
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
@@ -281,52 +251,59 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  selectorRow: {
-    flexGrow: 0,
-    marginBottom: 8,
-  },
-  selectorContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  tonicButton: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     backgroundColor: colors.neutral.white,
-    borderWidth: 1.5,
-    borderColor: '#D0D0D0',
-  },
-  chipActive: {
-    backgroundColor: colors.secondary.darkBlue,
+    borderWidth: 3,
     borderColor: colors.secondary.darkBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
-  chipText: {
-    fontSize: 13,
+  tonicButtonText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.secondary.darkBlue,
+  },
+  scaleChip: {
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: colors.neutral.white,
+    borderWidth: 2,
+    borderColor: colors.secondary.darkBlue,
+    marginBottom: 16,
+    minWidth: '60%',
+    alignItems: 'center',
+  },
+  scaleChipText: {
+    fontSize: 17,
     fontWeight: '600',
     color: colors.secondary.darkBlue,
   },
-  chipTextActive: {
-    color: colors.neutral.white,
-  },
   scaleName: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '700',
     color: colors.primary.orange,
     textAlign: 'center',
-    marginVertical: 10,
+    marginBottom: 8,
   },
   notesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 14,
+    gap: 6,
+    marginBottom: 12,
   },
   noteChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
     borderRadius: 14,
     backgroundColor: colors.secondary.darkBlue,
   },
@@ -334,47 +311,143 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.orange,
   },
   noteChipText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.neutral.white,
   },
-  noteChipTextTonic: {
+  description: {
+    fontSize: 13,
+    color: colors.secondary.mediumBlue,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  fretboardContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  shapeIndicator: {
+    fontSize: 14,
+    color: colors.neutral.mediumGray,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  navRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingBottom: 40,
+    width: '100%',
+  },
+  navButton: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 32,
+    backgroundColor: colors.primary.orange,
+    alignItems: 'center',
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  navButtonDisabled: {
+    backgroundColor: colors.neutral.mediumGray,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  navButtonText: {
+    color: colors.neutral.white,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tonicModalCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    width: '86%',
+    alignItems: 'center',
+  },
+  scaleModalCard: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 8,
+    width: '86%',
+    maxHeight: '68%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.secondary.darkBlue,
+    marginBottom: 18,
+  },
+  notesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  noteGridChip: {
+    width: 56,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: colors.neutral.lightGray,
+    borderWidth: 1.5,
+    borderColor: '#D0D0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteGridChipActive: {
+    backgroundColor: colors.secondary.darkBlue,
+    borderColor: colors.secondary.darkBlue,
+  },
+  noteGridText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.secondary.darkBlue,
+  },
+  noteGridTextActive: {
     color: colors.neutral.white,
   },
-  fretboardLabel: {
-    fontSize: 11,
-    color: colors.neutral.mediumGray,
+  scaleList: {
+    width: '100%',
+  },
+  scaleListItem: {
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 2,
+  },
+  scaleListItemActive: {
+    backgroundColor: colors.secondary.darkBlue,
+  },
+  scaleListText: {
+    fontSize: 16,
+    color: colors.secondary.darkBlue,
     fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 6,
   },
-  fretboardScroll: {
-    flexGrow: 0,
-    marginHorizontal: 0,
+  scaleListTextActive: {
+    color: colors.neutral.white,
+    fontWeight: '700',
   },
-  fretboardContent: {
-    paddingHorizontal: 16,
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
   },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-    marginTop: 10,
-    paddingBottom: 16,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  legendText: {
-    fontSize: 12,
+  cancelText: {
+    fontSize: 14,
     color: colors.neutral.mediumGray,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
