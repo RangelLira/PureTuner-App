@@ -65,5 +65,5 @@ export const TUNER_CONFIG = {
   bufferSize: 2048,
   smoothingFactor: 0.8,
   minVolume: 0.005,
-  centTolerance: 10,
+  centTolerance: 5,
 };

@@ -10,7 +10,10 @@ export class AudioProcessor {
   private maxFrequency: number;
   private accumulatedBuffer: Float32Array;
   private accumulatedSize: number;
-  private readonly targetBufferSize = 1024;
+  // 2048 (não 1024): com 1024 o Mi grave (82.41 Hz) cabia menos de 4 ciclos
+  // completos na janela pós-downsample, deixando o pico de autocorrelação
+  // pouco definido e a nota "afinada" com erro real de dezenas de cents.
+  private readonly targetBufferSize = 2048;
   private readonly downsampleFactor = 4;
 
   // Buffer pré-alocado — evita new Float32Array() a cada frame (~22×/seg)
