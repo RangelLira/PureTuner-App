@@ -7,7 +7,21 @@
       "Bash(node -e \"const db = require\\('@tombatossals/chords-db'\\); console.log\\('keys:', Object.keys\\(db\\)\\); console.log\\('guitar keys:', Object.keys\\(db.guitar\\)\\); console.log\\('chord keys sample:', Object.keys\\(db.guitar.chords\\).slice\\(0,5\\)\\); const C = db.guitar.chords['C']; console.log\\('C chord types:', C.map\\(c=>c.suffix\\).slice\\(0,10\\)\\); console.log\\('C major sample:', JSON.stringify\\(C.find\\(c=>c.suffix==='major'\\).positions[0], null, 2\\)\\);\")",
       "Bash(node -e \"const g = require\\('./node_modules/@tombatossals/chords-db/lib/guitar.json'\\); console.log\\('top keys:', Object.keys\\(g\\)\\); console.log\\('chords keys sample:', Object.keys\\(g.chords\\).slice\\(0,5\\)\\); const C = g.chords['C']; console.log\\('C suffixes:', C.map\\(x=>x.suffix\\).slice\\(0,8\\)\\); console.log\\('C major pos[0]:', JSON.stringify\\(C[0].positions[0]\\)\\);\")",
       "Bash(node -e \"const g = require\\('./node_modules/@tombatossals/chords-db/lib/guitar.json'\\); console.log\\('ALL chords keys:', Object.keys\\(g.chords\\)\\); const Cs = g.chords['Csharp']; console.log\\('Csharp suffixes \\(first 6\\):', Cs.slice\\(0,6\\).map\\(x=>x.suffix\\)\\); console.log\\('C major pos[0] full:', JSON.stringify\\(g.chords['C'][0].positions[0]\\)\\); console.log\\('C major pos[1]:', JSON.stringify\\(g.chords['C'][0].positions[1]\\)\\);\")",
-      "Bash(node *)"
+      "Bash(node *)",
+      "PowerShell(npm view *)",
+      "PowerShell(New-Item *)",
+      "Bash(npm test *)",
+      "Bash(npx react-native *)",
+      "Bash(rm -f /tmp/bundle_check.js)",
+      "Bash(rm -rf /tmp/bundle_assets)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(./gradlew assembleRelease)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(git config *)",
+      "Bash(git remote *)"
     ]
   }
 }
