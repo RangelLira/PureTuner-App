@@ -24,7 +24,8 @@ src/
 │   ├── PitchDetector.ts      # Frequência → nota + cents offset
 │   └── MetronomeEngine.ts    # Motor do metrônomo (drift correction, re-ancoragem de fase)
 ├── hooks/
-│   └── useTuner.ts           # Orquestra o pipeline, expõe estado à UI
+│   ├── useTuner.ts           # Orquestra o pipeline, expõe estado à UI
+│   └── useLeftHanded.ts      # Preferência de canhoto, persistida via AsyncStorage
 ├── components/
 │   ├── TunerIndicator.tsx    # Medidor visual do afinador
 │   └── ShapeFretboard.tsx    # Braço do violão em SVG — compartilhado por Escalas e Acordes
@@ -66,10 +67,10 @@ react-native-audio-record (PCM base64)
 ## Estado Atual das Telas
 | Tela        | Estado               | Notas                                                    |
 |-------------|----------------------|-----------------------------------------------------------|
-| Afinador    | Funcional            | Falta spring physics, keep-screen-on                      |
+| Afinador    | Funcional            | Spring physics na agulha, keep-screen-on ativo enquanto ouve |
 | Metrônomo   | Funcional            | Círculos de beat, BPM editável, drift correction           |
-| Acordes     | Funcional            | Busca por prefixo + 5 shapes CAGED (ver seção abaixo)      |
-| Escalas     | Funcional            | Círculo de tom + 16 escalas × 5 shapes                     |
+| Acordes     | Funcional            | Busca por prefixo + 5 shapes CAGED + modo canhoto (ver seção abaixo) |
+| Escalas     | Funcional            | Círculo de tom + 16 escalas × 5 shapes + modo canhoto       |
 | Sobre       | Funcional            | Botão "?" flutuante, modal em `AboutScreen.tsx`             |
 
 ## Telas Acordes e Escalas
@@ -79,12 +80,27 @@ desenhado em SVG, cordas na horizontal, corda aguda no topo, corda grave
 embaixo): círculo de tom → chip (azul, texto branco) → chips de notas →
 texto descritivo de altura fixa (`height: 76`, `numberOfLines={4}` — não
 deixar variar, senão o diagrama do braço "pula" de tela pra tela) →
-diagrama → indicador de posição (`n / total`) → botões Anterior/Próxima.
+diagrama → linha com indicador de posição (`n / total`) + chip
+"Canhoto"/"Destro" → botões Anterior/Próxima.
 O estado de ambas (tônica, qualidade/escala, shape) mora em `App.tsx`
 (`chordsState`/`scalesState`), não dentro das próprias telas — elas são
 desmontadas ao trocar de aba, então estado local voltaria pro padrão (Dó)
 toda vez. É estado em memória, sem AsyncStorage: some sozinho ao fechar o
 app de verdade ou reinstalar, o que é o comportamento pedido.
+
+**Modo canhoto**: `ShapeFretboard` aceita uma prop `leftHanded` que
+espelha o diagrama **horizontalmente** em torno do centro do canvas (helper
+`mx(x) = leftHanded ? SVG_W - x : x`, aplicado a toda coordenada X do SVG —
+trastes, cordas, pontos de nota, pestana, círculos de corda solta). A ordem
+vertical das cordas não muda (aguda em cima, grave embaixo, igual ao modo
+destro) — só o eixo dos trastes inverte: pestana/casa 1 à direita, tom
+sobe da direita pra esquerda. O chip "Canhoto"/"Destro" (mesma linha do
+indicador `n / total`) aparece nas duas telas e alterna a mesma preferência
+global, gerenciada pelo hook `useLeftHanded` (`src/hooks/useLeftHanded.ts`)
+e instanciada uma vez em `App.tsx`. Diferente do estado de tom/qualidade/
+escala, essa preferência **é persistida** via
+`@react-native-async-storage/async-storage` (chave
+`@puretuner/leftHanded`) — sobrevive a fechar o app.
 
 **Escalas**: shapes hardcoded em Dó (`scaleShapesC.ts`), transpostos
 somando `tonicPC` a cada traste (`transposeShape`, local em
@@ -117,18 +133,21 @@ não existir nesse tom.
 - Fontes nativas do sistema via React Native
 
 ## Dependências Nativas
-- `react-native-audio-record ^0.2.2` — requer linking (auto-link no RN 0.80)
-  - Android: adiciona permissão RECORD_AUDIO via código em RealAudioCapture.ts
-  - iOS: Info.plist NSMicrophoneUsageDescription necessário
+- `react-native-audio-record ^0.2.2` — requer linking (auto-link no RN 0.80).
+  Permissão RECORD_AUDIO adicionada automaticamente via merge do manifest da
+  própria lib; solicitada em runtime por `RealAudioCapture.requestPermission()`
+- `react-native-keep-awake ^4.0.0` — mantém a tela acesa enquanto o afinador
+  está ouvindo (`useTuner.ts`, `KeepAwake.activate()`/`deactivate()`)
+- `@react-native-async-storage/async-storage` — auto-link no RN 0.80. Única
+  dependência de persistência em disco do projeto, usada só pela preferência
+  de canhoto (`useLeftHanded.ts`)
 
 ## Requisitos Pendentes (PRODUCT.md)
-1. **Spring physics** na agulha do afinador (interpolação com easing)
-2. **Keep-screen-on** enquanto o afinador estiver ativo
-3. **Botão "Sobre"** — redondo com "?", visível em todas as telas
-4. Ajuste visual: título "Afinador" mais abaixo
-5. Ajuste visual: barra inferior quase o dobro mais alta
-6. Ajuste visual: botões da barra inferior mais acima
-7. Títulos corretos nas telas "em desenvolvimento"
+Todos os itens da lista original de `PRODUCT.md` ("Problemas para corrigir")
+foram implementados: spring physics na agulha, keep-screen-on, botão
+"Sobre", e os quatro ajustes visuais (título do Afinador, altura da barra
+inferior, posição dos botões da barra, títulos das telas). Nenhum item
+pendente no momento.
 
 ## Convenções do Projeto
 - Nenhum Redux / Context API — React hooks locais são suficientes

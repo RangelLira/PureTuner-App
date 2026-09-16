@@ -30,6 +30,8 @@ export const DEFAULT_CHORDS_STATE: ChordsState = { tonic: 'C', suffixIdx: 0, pos
 interface ChordsScreenProps {
   state: ChordsState;
   onStateChange: (patch: Partial<ChordsState>) => void;
+  leftHanded: boolean;
+  onToggleLeftHanded: () => void;
 }
 
 // Chave usada pelo dicionário @tombatossals/chords-db para cada tom.
@@ -127,7 +129,7 @@ function shapeMinFret(shape: ShapeData) {
   return all.length > 0 ? Math.min(...all) : 0;
 }
 
-export function ChordsScreen({ state, onStateChange }: ChordsScreenProps) {
+export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHanded }: ChordsScreenProps) {
   const { tonic, suffixIdx, posIdx } = state;
   const [tonicModalVisible, setTonicModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -259,9 +261,19 @@ export function ChordsScreen({ state, onStateChange }: ChordsScreenProps) {
               tonicPC={tonicPC}
               barres={fretboardData.barres}
               mutedStrings={fretboardData.muted}
+              leftHanded={leftHanded}
             />
           </View>
-          <Text style={styles.shapeIndicator}>{posIdx + 1} / {totalPositions}</Text>
+          <View style={styles.indicatorRow}>
+            <Text style={styles.shapeIndicator}>{posIdx + 1} / {totalPositions}</Text>
+            <TouchableOpacity
+              style={styles.handChip}
+              onPress={onToggleLeftHanded}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.handChipText}>{leftHanded ? 'Canhoto' : 'Destro'}</Text>
+            </TouchableOpacity>
+          </View>
         </>
       ) : (
         <View style={styles.empty}>
@@ -471,11 +483,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: -24,
   },
+  indicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
   shapeIndicator: {
     fontSize: 14,
     color: colors.neutral.mediumGray,
     fontWeight: '500',
-    marginBottom: 8,
+  },
+  handChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: colors.secondary.darkBlue,
+  },
+  handChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.neutral.white,
   },
   empty: {
     paddingVertical: 40,

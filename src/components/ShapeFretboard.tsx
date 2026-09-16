@@ -32,9 +32,15 @@ interface Props {
   tonicPC: number;
   barres?: FretboardBarre[];
   mutedStrings?: string[];
+  leftHanded?: boolean;
 }
 
-export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) {
+export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHanded }: Props) {
+  // Espelhamento horizontal para canhotos: reflete qualquer X em torno do
+  // centro do canvas. A ordem vertical das cordas não muda — só o eixo dos
+  // trastes inverte (pestana à direita, tom sobe da direita pra esquerda).
+  const mx = (x: number) => (leftHanded ? SVG_W - x : x);
+
   const allFrets = Object.values(shape).flat();
   const nonOpenFrets = allFrets.filter(f => f > 0);
   const hasOpen = allFrets.some(f => f === 0);
@@ -60,7 +66,7 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
       {Array.from({ length: N_SLOTS }, (_, i) => (
         <SvgText
           key={`fn${i}`}
-          x={slotCX(i)}
+          x={mx(slotCX(i))}
           y={PAD_TOP - DOT_R - 3}
           textAnchor="middle"
           fontSize={9}
@@ -78,8 +84,8 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
         return (
           <Line
             key={`fw${i}`}
-            x1={x} y1={PAD_TOP}
-            x2={x} y2={PAD_TOP + 5 * STR_H}
+            x1={mx(x)} y1={PAD_TOP}
+            x2={mx(x)} y2={PAD_TOP + 5 * STR_H}
             stroke={isNut ? colors.secondary.darkBlue : '#C0C0C0'}
             strokeWidth={isNut ? 4 : 1.5}
           />
@@ -95,16 +101,16 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
         return (
           <React.Fragment key={`str${s}`}>
             <Line
-              x1={x1} y1={y}
-              x2={SVG_W - PAD_RIGHT} y2={y}
+              x1={mx(x1)} y1={y}
+              x2={mx(SVG_W - PAD_RIGHT)} y2={y}
               stroke="#B8B8B8"
               strokeWidth={isThick ? 2 : 1}
             />
             {!isNutVisible && (
               mutedStrings?.includes(s) ? (
                 <SvgText
-                  x={PAD_LEFT - 4} y={y + 4}
-                  textAnchor="end"
+                  x={mx(PAD_LEFT - 4)} y={y + 4}
+                  textAnchor={leftHanded ? 'start' : 'end'}
                   fontSize={11}
                   fontWeight="bold"
                   fill={colors.status.error}
@@ -113,8 +119,8 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
                 </SvgText>
               ) : (
                 <SvgText
-                  x={PAD_LEFT - 4} y={y + 4}
-                  textAnchor="end"
+                  x={mx(PAD_LEFT - 4)} y={y + 4}
+                  textAnchor={leftHanded ? 'start' : 'end'}
                   fontSize={9}
                   fill={colors.neutral.mediumGray}
                   fontWeight="500"
@@ -135,7 +141,7 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
         if (sis.length < 2) return null;
         const slot = b.fret - windowBase;
         if (slot < 0 || slot >= N_SLOTS) return null;
-        const cx = slotCX(slot);
+        const cx = mx(slotCX(slot));
         const yFrom = strY(Math.min(...sis));
         const yTo = strY(Math.max(...sis));
         return (
@@ -157,7 +163,7 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
           if (fret === 0) return null; // open strings rendered separately
           const slot = fret - windowBase;
           if (slot < 0 || slot >= N_SLOTS) return null;
-          const cx = slotCX(slot);
+          const cx = mx(slotCX(slot));
           const cy = strY(si);
           const pc = (STRING_PC[s] + fret) % 12;
           const isTonic = pc === tonicPC;
@@ -199,13 +205,13 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings }: Props) 
         return (
           <React.Fragment key={`o${s}`}>
             <Circle
-              cx={OPEN_CX} cy={strY(si)} r={DOT_R}
+              cx={mx(OPEN_CX)} cy={strY(si)} r={DOT_R}
               fill={fill}
               stroke={isMuted ? colors.status.error : 'none'}
               strokeWidth={isMuted ? 1.5 : 0}
             />
             <SvgText
-              x={OPEN_CX} y={strY(si) + 3}
+              x={mx(OPEN_CX)} y={strY(si) + 3}
               textAnchor="middle"
               fontSize={9}
               fontWeight="bold"

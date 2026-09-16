@@ -9,6 +9,7 @@ import {
 import { colors } from './src/constants/colors';
 import { AboutModal } from './src/screens/AboutScreen';
 import { ChordsScreen, ChordsState, DEFAULT_CHORDS_STATE } from './src/screens/ChordsScreen';
+import { useLeftHanded } from './src/hooks/useLeftHanded';
 import { MetronomeScreen } from './src/screens/MetronomeScreen';
 import { DEFAULT_SCALES_STATE, ScalesScreen, ScalesState } from './src/screens/ScalesScreen';
 import { TunerScreen } from './src/screens/TunerScreen';
@@ -41,6 +42,10 @@ export default function App() {
   const [chordsState, setChordsState] = useState<ChordsState>(DEFAULT_CHORDS_STATE);
   const [scalesState, setScalesState] = useState<ScalesState>(DEFAULT_SCALES_STATE);
 
+  // Preferência de canhoto: compartilhada por Acordes e Escalas (ambas usam
+  // ShapeFretboard) e persistida em disco, ao contrário do estado acima.
+  const { leftHanded, toggleLeftHanded } = useLeftHanded();
+
   const updateChordsState = (patch: Partial<ChordsState>) =>
     setChordsState(prev => ({ ...prev, ...patch }));
   const updateScalesState = (patch: Partial<ScalesState>) =>
@@ -53,9 +58,23 @@ export default function App() {
       case 'metronome':
         return <MetronomeScreen />;
       case 'chords':
-        return <ChordsScreen state={chordsState} onStateChange={updateChordsState} />;
+        return (
+          <ChordsScreen
+            state={chordsState}
+            onStateChange={updateChordsState}
+            leftHanded={leftHanded}
+            onToggleLeftHanded={toggleLeftHanded}
+          />
+        );
       case 'scales':
-        return <ScalesScreen state={scalesState} onStateChange={updateScalesState} />;
+        return (
+          <ScalesScreen
+            state={scalesState}
+            onStateChange={updateScalesState}
+            leftHanded={leftHanded}
+            onToggleLeftHanded={toggleLeftHanded}
+          />
+        );
     }
   }
 

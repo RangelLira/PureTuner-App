@@ -27,6 +27,8 @@ export const DEFAULT_SCALES_STATE: ScalesState = { tonic: 'C', scaleIdx: 0, shap
 interface ScalesScreenProps {
   state: ScalesState;
   onStateChange: (patch: Partial<ScalesState>) => void;
+  leftHanded: boolean;
+  onToggleLeftHanded: () => void;
 }
 
 const SOLFEGE: Record<ScalesNoteKey, string> = {
@@ -77,7 +79,7 @@ function transposeShape(shape: ShapeData, tonicPC: number): ShapeData {
   return result;
 }
 
-export function ScalesScreen({ state, onStateChange }: ScalesScreenProps) {
+export function ScalesScreen({ state, onStateChange, leftHanded, onToggleLeftHanded }: ScalesScreenProps) {
   const { tonic, scaleIdx, shapeIdx } = state;
   const [tonicModalVisible, setTonicModalVisible] = useState(false);
   const [scaleModalVisible, setScaleModalVisible] = useState(false);
@@ -145,11 +147,20 @@ export function ScalesScreen({ state, onStateChange }: ScalesScreenProps) {
 
       {/* Shape fretboard */}
       <View style={styles.fretboardContainer}>
-        <ShapeFretboard shape={currentShape} tonicPC={tonicPC} />
+        <ShapeFretboard shape={currentShape} tonicPC={tonicPC} leftHanded={leftHanded} />
       </View>
 
       {/* Shape indicator */}
-      <Text style={styles.shapeIndicator}>{shapeIdx + 1} / {totalShapes}</Text>
+      <View style={styles.indicatorRow}>
+        <Text style={styles.shapeIndicator}>{shapeIdx + 1} / {totalShapes}</Text>
+        <TouchableOpacity
+          style={styles.handChip}
+          onPress={onToggleLeftHanded}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.handChipText}>{leftHanded ? 'Canhoto' : 'Destro'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Push nav buttons to same vertical position as TunerScreen's Iniciar */}
       <View style={{ flex: 1 }} />
@@ -345,11 +356,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: -24,
   },
+  indicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
   shapeIndicator: {
     fontSize: 14,
     color: colors.neutral.mediumGray,
     fontWeight: '500',
-    marginBottom: 8,
+  },
+  handChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: colors.secondary.darkBlue,
+  },
+  handChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.neutral.white,
   },
   navRow: {
     flexDirection: 'row',
