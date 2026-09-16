@@ -65,6 +65,33 @@ react-native-audio-record (PCM base64)
   → TunerScreen / TunerIndicator
 ```
 
+## Testes
+`__tests__/` cobre a camada pura de serviços e dados com testes reais
+(sem mocks de lógica, só dos módulos nativos indisponíveis no Jest):
+- `services/AudioProcessor.test.ts` — precisão de detecção com ondas
+  senoidais sintéticas nas 6 cordas da afinação padrão (tolerância de 10
+  cents), silence gate com histerese, robustez do buffer acumulado.
+- `services/PitchDetector.test.ts` — frequência → nota + cents.
+- `services/MetronomeEngine.test.ts` — timing com fake timers do Jest
+  (BPM, compasso, subdivisões, re-ancoragem de fase, saturação de BPM).
+- `data/scaleShapesC.test.ts` / `data/chordShapesC.test.ts` — todo shape
+  hardcoded, em toda tônica, comparado às classes de altura esperadas
+  (via `@tonaljs/tonal` para escalas; intervalos musicais para acordes) —
+  também garante que nenhuma transposição produz traste negativo.
+- `hooks/useLeftHanded.test.tsx` — persistência via AsyncStorage.
+- `jest.setup.js` mocka `react-native-sound`, `react-native-audio-record`
+  e `react-native-keep-awake` (módulos nativos que não existem no Jest);
+  `@react-native-async-storage/async-storage` usa o mock oficial da lib.
+
+Os testes de `AudioProcessor` pegaram dois bugs reais de precisão que já
+foram corrigidos: (1) `buffer` era uma *view* (`subarray`) sobre
+`accumulatedBuffer`, e o slide de 50% (`copyWithin`) mutava essa mesma
+memória *antes* de downsample/autocorrelação lerem — a segunda metade da
+janela sobrescrevia a primeira, corrompendo a detecção; (2) a correção de
+oitava só testava `bestPeriod / 2`, insuficiente quando a busca travava
+num múltiplo maior do período real (comum em notas agudas) — generalizada
+para testar `/2`, `/3` e `/4`.
+
 ## Estado Atual das Telas
 | Tela        | Estado               | Notas                                                    |
 |-------------|----------------------|-----------------------------------------------------------|

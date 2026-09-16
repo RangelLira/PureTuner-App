@@ -51,27 +51,40 @@ export class AudioProcessor {
 
     if (this.accumulatedSize < this.targetBufferSize) return null;
 
+    // `buffer` é uma VIEW sobre accumulatedBuffer (subarray não copia). Por
+    // isso o slide abaixo — que muta accumulatedBuffer via copyWithin — só
+    // pode rodar depois que RMS e downsample já leram `buffer`; do
+    // contrário a autocorrelação processa memória parcialmente sobrescrita
+    // (a primeira metade da janela duplicada por cima da segunda), gerando
+    // erro sistemático de dezenas de cents nas notas mais graves.
     const buffer = this.accumulatedBuffer.subarray(0, this.targetBufferSize);
     const volume = this.calculateRMS(buffer);
+
+    // Silence gate com histerese — evita piscar entre nota e silêncio
+    let result: AudioAnalysisResult | null;
+    if (this.isSilent) {
+      if (volume < this.soundThreshold) {
+        result = { frequency: 0, volume, confidence: 0 };
+      } else {
+        this.isSilent = false;
+        result = this.detectPitch(buffer, volume);
+      }
+    } else if (volume < this.silenceThreshold) {
+      this.isSilent = true;
+      result = { frequency: 0, volume, confidence: 0 };
+    } else {
+      result = this.detectPitch(buffer, volume);
+    }
 
     // Slide de metade — mais atualizações por segundo
     const slide = Math.floor(this.targetBufferSize / 2);
     this.accumulatedBuffer.copyWithin(0, slide, this.accumulatedSize);
     this.accumulatedSize -= slide;
 
-    // Silence gate com histerese — evita piscar entre nota e silêncio
-    if (this.isSilent) {
-      if (volume < this.soundThreshold) {
-        return { frequency: 0, volume, confidence: 0 };
-      }
-      this.isSilent = false;
-    } else {
-      if (volume < this.silenceThreshold) {
-        this.isSilent = true;
-        return { frequency: 0, volume, confidence: 0 };
-      }
-    }
+    return result;
+  }
 
+  private detectPitch(buffer: Float32Array, volume: number): AudioAnalysisResult | null {
     const downsampledLen = this.downsampleInto(buffer, this.downsampleFactor);
     const downsampledView = this.downsampleBuffer.subarray(0, downsampledLen);
     const downsampledRate = this.sampleRate / this.downsampleFactor;
@@ -122,14 +135,25 @@ export class AudioProcessor {
     const confidence = rmsSquared > 0 ? Math.min(bestCorr / rmsSquared, 1.0) : 0;
     if (confidence < 0.35) return null;
 
-    // Correção de oitava: verifica se metade do período tem correlação boa.
-    // Se sim, a nota real está uma oitava acima.
-    const halfPeriod = Math.floor(bestPeriod / 2);
-    if (halfPeriod >= minPeriod) {
-      const halfCorr = this.autocorrAt(buffer, halfPeriod, n);
-      if (halfCorr > bestCorr * 0.85) {
-        bestPeriod = halfPeriod;
-        bestCorr = halfCorr;
+    // Correção de período: a autocorrelação de um tom periódico tem picos
+    // em cada múltiplo inteiro do período real, não só no fundamental — a
+    // busca exaustiva acima pode ter escolhido um múltiplo maior (comum em
+    // notas agudas, onde vários múltiplos cabem dentro do intervalo de
+    // busca; ex.: travar no 3º harmônico, o que uma correção fixa de "só
+    // divide por 2" não resolve). Testa submúltiplos específicos
+    // (bestPeriod/2, /3, /4) e adota o menor cuja correlação já seja quase
+    // tão boa quanto o máximo global — sem varrer a partir do período
+    // mínimo, pois lags muito curtos têm correlação alta só por inércia do
+    // sinal (amostras vizinhas de um tom grave mudam pouco entre si), o que
+    // geraria falsos positivos nas cordas mais graves.
+    for (let divisor = 4; divisor >= 2; divisor--) {
+      const candidate = Math.round(bestPeriod / divisor);
+      if (candidate < minPeriod) continue;
+      const candidateCorr = this.autocorrAt(buffer, candidate, n);
+      if (candidateCorr > bestCorr * 0.85) {
+        bestPeriod = candidate;
+        bestCorr = candidateCorr;
+        break;
       }
     }
 

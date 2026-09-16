@@ -67,7 +67,7 @@ const SCALES = [
 
 // Transpose shape from key C (tonicPC=0) to any key.
 // Each fret shifts by tonicPC. If the result would exceed fret 22, shift down one octave.
-function transposeShape(shape: ShapeData, tonicPC: number): ShapeData {
+export function transposeShape(shape: ShapeData, tonicPC: number): ShapeData {
   if (tonicPC === 0) { return shape; }
   const allFrets = Object.values(shape).flat();
   const maxFret = allFrets.length > 0 ? Math.max(...allFrets) : 0;
