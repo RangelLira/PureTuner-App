@@ -36,9 +36,17 @@ export class AudioProcessor {
   }
 
   public processAudioBuffer(audioData: Float32Array): AudioAnalysisResult | null {
+    // Se o chunk recebido não couber no espaço livre, abre espaço descartando
+    // as amostras mais antigas (não as novas) — nunca deve perder o sinal
+    // mais recente por causa de jitter no agendamento do módulo nativo.
     const available = this.accumulatedBuffer.length - this.accumulatedSize;
-    const toCopy = Math.min(audioData.length, available);
-    this.accumulatedBuffer.set(audioData.subarray(0, toCopy), this.accumulatedSize);
+    if (audioData.length > available) {
+      const shift = Math.min(this.accumulatedSize, audioData.length - available);
+      this.accumulatedBuffer.copyWithin(0, shift, this.accumulatedSize);
+      this.accumulatedSize -= shift;
+    }
+    const toCopy = Math.min(audioData.length, this.accumulatedBuffer.length - this.accumulatedSize);
+    this.accumulatedBuffer.set(audioData.subarray(audioData.length - toCopy), this.accumulatedSize);
     this.accumulatedSize += toCopy;
 
     if (this.accumulatedSize < this.targetBufferSize) return null;

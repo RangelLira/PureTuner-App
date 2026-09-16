@@ -4,6 +4,7 @@ Afinador, para afinar o instrumento; Metronomo, para praticar e compreender melh
 rítmicas e praticar acompanhamento; Dicionário de acordes, para que o usuário busque por acordes e suas 
 opções; Escalas, tablaturas das principais Escalas para praticar. 
 Idioma: Apenas Portugues BR - Focado no público local
+Plataforma: Apenas Android (projeto de portfólio, enxuto e sem versão iOS)
 Afinação: Padrão A 440hz - Focado no que o publico mais utiliza
 Esquema de cores: Fixa (Não tem variação de temas) 
 Cores principais: Branco e Laranja 

@@ -1,6 +1,33 @@
 import { NativeEventEmitter, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import AudioRecord from 'react-native-audio-record';
 
+// Hermes (motor JS do RN) não expõe atob/btoa globalmente — decodificador
+// manual em vez de depender de um polyfill.
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const BASE64_LOOKUP: Record<string, number> = {};
+for (let i = 0; i < BASE64_CHARS.length; i++) BASE64_LOOKUP[BASE64_CHARS[i]] = i;
+
+/* eslint-disable no-bitwise -- manipulação de bits inerente à decodificação base64 */
+function decodeBase64ToBytes(base64: string): Uint8Array {
+  const clean = base64.replace(/[=\s]+$/, '');
+  const bytes = new Uint8Array(Math.floor((clean.length * 6) / 8));
+  let bitBuffer = 0;
+  let bitCount = 0;
+  let byteIndex = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const value = BASE64_LOOKUP[clean[i]];
+    if (value === undefined) continue;
+    bitBuffer = (bitBuffer << 6) | value;
+    bitCount += 6;
+    if (bitCount >= 8) {
+      bitCount -= 8;
+      bytes[byteIndex++] = (bitBuffer >> bitCount) & 0xff;
+    }
+  }
+  return bytes;
+}
+/* eslint-enable no-bitwise */
+
 export interface AudioBuffer {
   data: Float32Array;
   sampleRate: number;
@@ -9,7 +36,6 @@ export interface AudioBuffer {
 
 export interface AudioCaptureConfig {
   sampleRate: number;
-  bufferSize: number;
   channels: number;
 }
 
@@ -92,12 +118,7 @@ export class RealAudioCapture {
 
   private decodeBase64PCM(base64: string): AudioBuffer | null {
     try {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-
+      const bytes = decodeBase64ToBytes(base64);
       const int16 = new Int16Array(bytes.buffer);
       const float32 = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) {

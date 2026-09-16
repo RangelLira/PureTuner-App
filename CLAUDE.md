@@ -4,11 +4,13 @@
 App React Native de utilitários musicais para músicos brasileiros.
 Stack: React Native 0.80.1 · React 19.1.0 · TypeScript 5.0.4
 Idioma do produto: Português (Brasil) exclusivamente.
+Plataforma: **Android exclusivamente** — projeto de portfólio enxuto, sem
+versão iOS (pasta `ios/`, Gemfile e CocoaPods removidos do projeto), sem
+temas e sem i18n.
 
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
-npm run ios         # roda no simulador iOS
 npm start           # Metro bundler
 npm test            # Jest
 npm run lint        # ESLint
@@ -34,8 +36,7 @@ src/
 │   ├── MetronomeScreen.tsx   # Metrônomo (funcional)
 │   ├── ChordsScreen.tsx      # Acordes — busca + shapes CAGED (funcional)
 │   ├── ScalesScreen.tsx      # Escalas — círculo de tom + 5 shapes por escala (funcional)
-│   ├── AboutScreen.tsx       # Modal "Sobre"
-│   └── ComingSoonScreens.tsx # Legado, não roteado no App.tsx atual
+│   └── AboutScreen.tsx       # Modal "Sobre"
 ├── data/
 │   ├── scaleShapesC.ts       # 16 escalas × 5 shapes, hardcoded em Dó, transpostos em runtime
 │   ├── scaleDescriptions.ts  # Texto explicativo por escala

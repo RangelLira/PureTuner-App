@@ -82,6 +82,7 @@ export function MetronomeScreen() {
 
   // Load sound pools on mount
   useEffect(() => {
+    const engine = engineRef.current;
     const load = (f: string) =>
       new Sound(f, Sound.MAIN_BUNDLE, err => {
         if (err) console.warn('[metro] load', f, err);
@@ -91,7 +92,7 @@ export function MetronomeScreen() {
     hiPool.current     = [load('metro_hi.wav'),     load('metro_hi.wav')];
     return () => {
       [...accentPool.current, ...clickPool.current, ...hiPool.current].forEach(s => s.release());
-      engineRef.current.stop();
+      engine.stop();
     };
   }, []);
 
@@ -309,7 +310,7 @@ export function MetronomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={{ flex: 1 }} />
+      <View style={styles.spacer} />
 
       {/* Iniciar / Parar — identical to TunerScreen */}
       <View style={styles.controlsContainer}>
@@ -500,6 +501,7 @@ const styles = StyleSheet.create({
     borderColor: '#D0D0D0',
   },
   subChipText: { fontSize: 15, fontWeight: '600', color: colors.secondary.darkBlue },
+  spacer: { flex: 1 },
 
   controlsContainer: { alignItems: 'center', paddingBottom: 40 },
   button: {

@@ -163,7 +163,7 @@ export function ScalesScreen({ state, onStateChange, leftHanded, onToggleLeftHan
       </View>
 
       {/* Push nav buttons to same vertical position as TunerScreen's Iniciar */}
-      <View style={{ flex: 1 }} />
+      <View style={styles.spacer} />
 
       {/* Navigation buttons */}
       <View style={styles.navRow}>
@@ -377,6 +377,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.neutral.white,
+  },
+  spacer: {
+    flex: 1,
   },
   navRow: {
     flexDirection: 'row',

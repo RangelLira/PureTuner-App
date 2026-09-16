@@ -31,7 +31,6 @@ export function useTuner() {
     pitchDetector.current = new PitchDetector(TUNER_CONFIG.centTolerance);
     audioCapture.current = new RealAudioCapture({
       sampleRate: TUNER_CONFIG.sampleRate,
-      bufferSize: TUNER_CONFIG.bufferSize,
       channels: 1,
     });
 
