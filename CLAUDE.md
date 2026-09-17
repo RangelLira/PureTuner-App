@@ -8,6 +8,18 @@ Plataforma: **Android exclusivamente** — projeto de portfólio enxuto, sem
 versão iOS (pasta `ios/`, Gemfile e CocoaPods removidos do projeto), sem
 temas e sem i18n.
 
+## Build de Release (APK)
+`enableProguardInReleaseBuilds = true` em `android/app/build.gradle`
+(minify + shrinkResources via R8) e `ndk.abiFilters` restrito a
+`armeabi-v7a` + `arm64-v8a` (também refletido em
+`reactNativeArchitectures` no `gradle.properties`) — as ABIs x86/x86_64
+só existem em emulador, nunca em celular real, e não valem o peso extra
+num APK universal. Isso cortou o `app-release.apk` de ~45MB para ~23MB
+(build verificado localmente com `./gradlew assembleRelease`). Se
+precisar testar num emulador x86_64, gere um build com
+`reactNativeArchitectures` incluindo `x86_64` outra vez, ou use um
+emulador/dispositivo arm64.
+
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
