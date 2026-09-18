@@ -13,6 +13,8 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+*.jks
+android/keystore.properties
 .kotlin/
 
 # node.js
@@ -52,3 +54,6 @@ yarn-error.log
 
 # Reference spreadsheet (not for distribution)
 escalas.ods
+
+# Claude Code — configuração local de permissões (específica desta máquina)
+.claude/settings.local.json
