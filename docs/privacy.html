@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index,follow">
+<title>Política de Privacidade — Pure Tuner</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1e;
+    --muted: #5b5b66;
+    --line: #e4e4ea;
+    --accent: #E65C00;
+    --card: #f6f6f9;
+    --mark: #fff3bf;
+    --mark-fg: #5c4400;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131317;
+      --fg: #e9e9ef;
+      --muted: #9a9aa7;
+      --line: #2c2c34;
+      --accent: #FF8B3D;
+      --card: #1c1c22;
+      --mark: #4a3d00;
+      --mark-fg: #ffe9a8;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 96px; }
+  header.top { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 28px; }
+  h1 { font-size: 1.55rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 1.15rem; margin: 34px 0 10px; letter-spacing: -0.01em; }
+  h3 { font-size: 1rem; margin: 22px 0 6px; }
+  p, ul { margin: 10px 0; }
+  ul { padding-left: 22px; }
+  li { margin: 5px 0; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: 0.92rem; }
+  .lang {
+    display: inline-flex; gap: 6px; margin-top: 14px; flex-wrap: wrap;
+  }
+  .lang button {
+    font: inherit; font-size: 0.85rem; padding: 5px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); color: var(--fg);
+    cursor: pointer;
+  }
+  .lang button[aria-pressed="true"] {
+    border-color: var(--accent); color: var(--accent); font-weight: 600;
+  }
+  .summary {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 4px 18px; margin: 18px 0 8px;
+  }
+  mark { background: var(--mark); color: var(--mark-fg); padding: 0 4px; border-radius: 4px; }
+  section[hidden] { display: none; }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Política de Privacidade — Pure Tuner</h1>
+    <div class="muted" id="updated">Última atualização: 18 de setembro de 2026</div>
+    <nav class="lang" aria-label="Idioma / Language / Idioma">
+      <button data-lang="pt" aria-pressed="true">Português</button>
+      <button data-lang="en" aria-pressed="false">English</button>
+      <button data-lang="es" aria-pressed="false">Español</button>
+    </nav>
+  </header>
+
+  <!-- ================= PORTUGUÊS ================= -->
+  <section id="pt">
+    <p>
+      O <strong>Pure Tuner</strong> é um aplicativo de utilidades para músicos —
+      afinador cromático, metrônomo, dicionário de acordes e tablatura de escalas —,
+      desenvolvido e mantido por <strong>Contest Software</strong> (&ldquo;nós&rdquo;).
+      Esta Política explica quais dados o aplicativo trata, com que finalidade, e
+      quais são os seus direitos. O código-fonte do Pure Tuner é aberto e está
+      disponível em
+      <a href="https://github.com/RangelLira/PureTuner-App">github.com/RangelLira/PureTuner-App</a>.
+    </p>
+
+    <div class="summary">
+      <h2>Resumo</h2>
+      <ul>
+        <li>O Pure Tuner funciona <strong>inteiramente no seu aparelho</strong>, sem conexão com a internet.</li>
+        <li>O microfone é usado só para detectar a nota tocada <strong>em tempo real</strong>: o áudio nunca é gravado em arquivo, armazenado ou enviado a qualquer lugar.</li>
+        <li>Não há contas, login, anúncios, rastreamento ou ferramentas de análise de uso.</li>
+        <li>Não coletamos, nem vendemos, nem cedemos nenhum dado a terceiros — porque não coletamos dado nenhum.</li>
+      </ul>
+    </div>
+
+    <h2>1. Dados que o aplicativo trata</h2>
+
+    <h3>1.1 Microfone (afinador)</h3>
+    <p>
+      A função de afinador usa o microfone do aparelho para captar o som do
+      instrumento e calcular a nota e a afinação em tempo real. Esse processamento
+      acontece <strong>inteiramente no seu dispositivo</strong>: o áudio captado é
+      analisado e descartado imediatamente a cada fração de segundo. O aplicativo
+      <strong>não grava, não salva e não transmite</strong> o áudio do microfone
+      para nenhum servidor, nem para nós, nem para terceiros.
+    </p>
+
+    <h3>1.2 Preferência local (modo canhoto)</h3>
+    <p>
+      O app salva localmente, no armazenamento do próprio aparelho, uma única
+      preferência: se o diagrama do braço do violão (nas telas Acordes e Escalas)
+      deve aparecer espelhado para canhotos. Esse dado é apenas um valor
+      verdadeiro/falso, não identifica você, nunca sai do aparelho e é apagado
+      quando o app é desinstalado.
+    </p>
+
+    <h2>2. O que não coletamos</h2>
+    <p>O Pure Tuner <strong>não</strong> coleta, usa ou transmite:</p>
+    <ul>
+      <li>nome, e-mail, telefone ou qualquer dado de identificação — o app não tem contas nem login;</li>
+      <li>dados de localização;</li>
+      <li>sua agenda de contatos, fotos, arquivos ou dados de outros apps;</li>
+      <li>identificadores de publicidade;</li>
+      <li>dados de uso, telemetria, estatísticas de navegação ou relatórios de falha;</li>
+      <li>qualquer dado para fins de anúncios — o app não exibe anúncios.</li>
+    </ul>
+
+    <h2>3. Finalidades e base legal</h2>
+    <p>
+      A única finalidade de qualquer processamento de dados é fazer o aplicativo
+      funcionar (detectar a nota tocada, lembrar a preferência de canhoto). Conforme
+      a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 &mdash; LGPD), a base legal
+      é a <strong>execução de funcionalidade solicitada por você</strong> ao usar o
+      afinador e ao ativar o modo canhoto — não há coleta de dados pessoais que
+      exija outra base legal.
+    </p>
+
+    <h2>4. Compartilhamento com terceiros</h2>
+    <p>
+      O Pure Tuner <strong>não se conecta à internet</strong> durante o uso normal e
+      não integra nenhum serviço de terceiros (sem Firebase, sem Google Analytics,
+      sem SDKs de anúncio, sem provedores de nuvem). Como nenhum dado sai do
+      aparelho, não há o que compartilhar — e não compartilhamos nada.
+    </p>
+
+    <h2>5. Retenção e exclusão</h2>
+    <p>
+      O áudio do microfone nunca é retido — é processado e descartado
+      instantaneamente. A única informação salva (a preferência de canhoto) fica no
+      armazenamento local do app e é apagada automaticamente quando você desinstala
+      o Pure Tuner.
+    </p>
+
+    <h2>6. Segurança</h2>
+    <p>
+      Como nenhum dado trafega para fora do aparelho, não há transmissão a proteger.
+      A permissão de microfone é solicitada pelo sistema operacional Android e só é
+      usada enquanto a tela do afinador está ativa.
+    </p>
+
+    <h2>7. Crianças</h2>
+    <p>
+      O Pure Tuner não é direcionado a crianças e não coletamos conscientemente
+      dados de menores de 13 anos — na prática, isso já é garantido pelo fato de o
+      app não coletar dado pessoal algum, de ninguém.
+    </p>
+
+    <h2>8. Seus direitos</h2>
+    <p>
+      Ainda que o app não colete dados pessoais, você tem, pela LGPD, direito a
+      esclarecimentos sobre qualquer tratamento de dados. Para dúvidas sobre esta
+      Política ou sobre o funcionamento do app, entre em contato:
+    </p>
+    <p><strong>E-mail:</strong> <a href="mailto:contato.contestsoftware@gmail.com">contato.contestsoftware@gmail.com</a></p>
+
+    <h2>9. Alterações nesta Política</h2>
+    <p>
+      Podemos atualizar esta Política periodicamente. A versão vigente estará sempre
+      neste endereço, com a data de &ldquo;Última atualização&rdquo; no topo.
+      Mudanças relevantes poderão ser comunicadas dentro do aplicativo.
+    </p>
+  </section>
+
+  <!-- ================= ENGLISH ================= -->
+  <section id="en" hidden>
+    <p>
+      <strong>Pure Tuner</strong> is a toolkit app for musicians — chromatic tuner,
+      metronome, chord dictionary and scale tablature —, developed and maintained by
+      <strong>Contest Software</strong> (&ldquo;we&rdquo;). This Policy explains what
+      data the app processes, for what purpose, and what your rights are. Pure Tuner
+      is open source and available at
+      <a href="https://github.com/RangelLira/PureTuner-App">github.com/RangelLira/PureTuner-App</a>.
+    </p>
+
+    <div class="summary">
+      <h2>Summary</h2>
+      <ul>
+        <li>Pure Tuner runs <strong>entirely on your device</strong>, with no internet connection.</li>
+        <li>The microphone is used only to detect the note being played <strong>in real time</strong>: the audio is never recorded to a file, stored, or sent anywhere.</li>
+        <li>No accounts, no login, no ads, no tracking, and no usage-analytics tools.</li>
+        <li>We do not collect, sell, or hand any data to third parties — because we do not collect any data at all.</li>
+      </ul>
+    </div>
+
+    <h2>1. Data the app processes</h2>
+
+    <h3>1.1 Microphone (tuner)</h3>
+    <p>
+      The tuner feature uses the device&rsquo;s microphone to capture the
+      instrument&rsquo;s sound and calculate the note and tuning offset in real
+      time. This processing happens <strong>entirely on your device</strong>: the
+      captured audio is analyzed and discarded immediately, a fraction of a second
+      at a time. The app <strong>does not record, save, or transmit</strong> the
+      microphone audio to any server, to us, or to any third party.
+    </p>
+
+    <h3>1.2 Local preference (left-handed mode)</h3>
+    <p>
+      The app saves one single preference locally, on the device&rsquo;s own
+      storage: whether the guitar neck diagram (in the Chords and Scales screens)
+      should be mirrored for left-handed players. This is just a true/false value,
+      does not identify you, never leaves the device, and is deleted when the app is
+      uninstalled.
+    </p>
+
+    <h2>2. What we do not collect</h2>
+    <p>Pure Tuner does <strong>not</strong> collect, use or transmit:</p>
+    <ul>
+      <li>your name, email, phone number, or any identifying data — the app has no accounts or login;</li>
+      <li>location data;</li>
+      <li>your contacts, photos, files or data from other apps;</li>
+      <li>advertising identifiers;</li>
+      <li>usage data, telemetry, browsing statistics or crash reports;</li>
+      <li>any data for advertising purposes &mdash; the app shows no ads.</li>
+    </ul>
+
+    <h2>3. Purposes and legal basis</h2>
+    <p>
+      The only purpose of any data processing is making the app work (detecting the
+      note being played, remembering the left-handed preference). Under Brazil&rsquo;s
+      General Data Protection Law (Law 13.709/2018 &mdash; LGPD), the legal basis is
+      the <strong>performance of a feature you requested</strong> by using the tuner
+      and enabling left-handed mode — there is no personal-data collection requiring
+      any other legal basis.
+    </p>
+
+    <h2>4. Sharing with third parties</h2>
+    <p>
+      Pure Tuner <strong>does not connect to the internet</strong> during normal use
+      and integrates no third-party service (no Firebase, no Google Analytics, no
+      ad SDKs, no cloud providers). Since no data ever leaves the device, there is
+      nothing to share — and we share nothing.
+    </p>
+
+    <h2>5. Retention and deletion</h2>
+    <p>
+      Microphone audio is never retained — it is processed and discarded instantly.
+      The only information saved (the left-handed preference) sits in the app&rsquo;s
+      local storage and is automatically deleted when you uninstall Pure Tuner.
+    </p>
+
+    <h2>6. Security</h2>
+    <p>
+      Since no data travels outside the device, there is no transmission to
+      protect. The microphone permission is requested through the Android operating
+      system and is only used while the tuner screen is active.
+    </p>
+
+    <h2>7. Children</h2>
+    <p>
+      Pure Tuner is not directed at children and we do not knowingly collect data
+      from anyone under 13 — in practice this is already guaranteed by the fact
+      that the app collects no personal data from anyone.
+    </p>
+
+    <h2>8. Your rights</h2>
+    <p>
+      Even though the app collects no personal data, under the LGPD you still have
+      the right to clarification about any data processing. For questions about
+      this Policy or how the app works, contact us:
+    </p>
+    <p><strong>Email:</strong> <a href="mailto:contato.contestsoftware@gmail.com">contato.contestsoftware@gmail.com</a></p>
+
+    <h2>9. Changes to this Policy</h2>
+    <p>
+      We may update this Policy from time to time. The current version is always at
+      this address, with the &ldquo;Last updated&rdquo; date at the top. Significant
+      changes may be announced inside the app.
+    </p>
+  </section>
+
+  <!-- ================= ESPAÑOL ================= -->
+  <section id="es" hidden>
+    <p>
+      <strong>Pure Tuner</strong> es una aplicación de utilidades para músicos —
+      afinador cromático, metrónomo, diccionario de acordes y tablatura de escalas
+      —, desarrollada y mantenida por <strong>Contest Software</strong>
+      (&ldquo;nosotros&rdquo;). Esta Política explica qué datos trata la aplicación,
+      con qué finalidad, y cuáles son tus derechos. Pure Tuner es de código abierto
+      y está disponible en
+      <a href="https://github.com/RangelLira/PureTuner-App">github.com/RangelLira/PureTuner-App</a>.
+    </p>
+
+    <div class="summary">
+      <h2>Resumen</h2>
+      <ul>
+        <li>Pure Tuner funciona <strong>enteramente en tu dispositivo</strong>, sin conexión a internet.</li>
+        <li>El micrófono se usa solo para detectar la nota tocada <strong>en tiempo real</strong>: el audio nunca se graba en un archivo, se almacena ni se envía a ningún lugar.</li>
+        <li>No hay cuentas, inicio de sesión, anuncios, rastreo ni herramientas de análisis de uso.</li>
+        <li>No recopilamos, vendemos ni cedemos ningún dato a terceros — porque no recopilamos ningún dato.</li>
+      </ul>
+    </div>
+
+    <h2>1. Datos que trata la aplicación</h2>
+
+    <h3>1.1 Micrófono (afinador)</h3>
+    <p>
+      La función de afinador usa el micrófono del dispositivo para captar el sonido
+      del instrumento y calcular la nota y el desvío de afinación en tiempo real.
+      Este procesamiento ocurre <strong>enteramente en tu dispositivo</strong>: el
+      audio captado se analiza y se descarta de inmediato, fracción de segundo a
+      fracción de segundo. La aplicación <strong>no graba, no guarda ni
+      transmite</strong> el audio del micrófono a ningún servidor, ni a nosotros, ni
+      a terceros.
+    </p>
+
+    <h3>1.2 Preferencia local (modo zurdo)</h3>
+    <p>
+      La app guarda localmente, en el almacenamiento del propio dispositivo, una
+      única preferencia: si el diagrama del mástil de la guitarra (en las pantallas
+      de Acordes y Escalas) debe mostrarse reflejado para zurdos. Es solo un valor
+      verdadero/falso, no te identifica, nunca sale del dispositivo y se elimina
+      cuando se desinstala la app.
+    </p>
+
+    <h2>2. Lo que no recopilamos</h2>
+    <p>Pure Tuner <strong>no</strong> recopila, usa ni transmite:</p>
+    <ul>
+      <li>tu nombre, correo electrónico, teléfono ni ningún dato de identificación — la app no tiene cuentas ni inicio de sesión;</li>
+      <li>datos de ubicación;</li>
+      <li>tus contactos, fotos, archivos o datos de otras apps;</li>
+      <li>identificadores de publicidad;</li>
+      <li>datos de uso, telemetría, estadísticas de navegación o informes de fallos;</li>
+      <li>ningún dato con fines publicitarios &mdash; la app no muestra anuncios.</li>
+    </ul>
+
+    <h2>3. Finalidades y base legal</h2>
+    <p>
+      La única finalidad de cualquier procesamiento de datos es hacer que la
+      aplicación funcione (detectar la nota tocada, recordar la preferencia de
+      zurdo). Conforme a la Ley General de Protección de Datos de Brasil (Ley
+      13.709/2018 &mdash; LGPD), la base legal es la <strong>ejecución de una
+      función que solicitaste</strong> al usar el afinador y activar el modo zurdo
+      — no hay recopilación de datos personales que requiera otra base legal.
+    </p>
+
+    <h2>4. Compartición con terceros</h2>
+    <p>
+      Pure Tuner <strong>no se conecta a internet</strong> durante el uso normal y
+      no integra ningún servicio de terceros (sin Firebase, sin Google Analytics,
+      sin SDK de anuncios, sin proveedores de nube). Como ningún dato sale del
+      dispositivo, no hay nada que compartir — y no compartimos nada.
+    </p>
+
+    <h2>5. Conservación y eliminación</h2>
+    <p>
+      El audio del micrófono nunca se conserva — se procesa y descarta de forma
+      instantánea. La única información guardada (la preferencia de zurdo) queda en
+      el almacenamiento local de la app y se elimina automáticamente cuando
+      desinstalas Pure Tuner.
+    </p>
+
+    <h2>6. Seguridad</h2>
+    <p>
+      Como ningún dato viaja fuera del dispositivo, no hay transmisión que proteger.
+      El permiso de micrófono lo solicita el sistema operativo Android y solo se usa
+      mientras la pantalla del afinador está activa.
+    </p>
+
+    <h2>7. Menores</h2>
+    <p>
+      Pure Tuner no está dirigido a menores y no recopilamos conscientemente datos
+      de menores de 13 años — en la práctica, esto ya está garantizado por el hecho
+      de que la app no recopila ningún dato personal de nadie.
+    </p>
+
+    <h2>8. Tus derechos</h2>
+    <p>
+      Aunque la app no recopila datos personales, según la LGPD tienes derecho a
+      recibir aclaraciones sobre cualquier tratamiento de datos. Para dudas sobre
+      esta Política o sobre el funcionamiento de la app, contáctanos:
+    </p>
+    <p><strong>Correo:</strong> <a href="mailto:contato.contestsoftware@gmail.com">contato.contestsoftware@gmail.com</a></p>
+
+    <h2>9. Cambios en esta Política</h2>
+    <p>
+      Podemos actualizar esta Política periódicamente. La versión vigente estará
+      siempre en esta dirección, con la fecha de &ldquo;Última actualización&rdquo;
+      arriba. Los cambios relevantes podrán comunicarse dentro de la aplicación.
+    </p>
+  </section>
+
+  <footer class="muted">
+    <p>Pure Tuner &middot; Contest Software &middot;
+      <a href="https://github.com/RangelLira/PureTuner-App">código-fonte / source / código fuente</a>
+    </p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var sections = { pt: document.getElementById('pt'), en: document.getElementById('en'), es: document.getElementById('es') };
+    var buttons = document.querySelectorAll('.lang button');
+    var updated = document.getElementById('updated');
+    var labels = {
+      pt: 'Última atualização: 18 de setembro de 2026',
+      en: 'Last updated: September 18, 2026',
+      es: 'Última actualización: 18 de septiembre de 2026'
+    };
+    var htmlLang = { pt: 'pt-BR', en: 'en', es: 'es' };
+    function pick(lang) {
+      if (!sections[lang]) lang = 'pt';
+      Object.keys(sections).forEach(function (k) { sections[k].hidden = (k !== lang); });
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.lang === lang)); });
+      updated.textContent = labels[lang];
+      document.documentElement.lang = htmlLang[lang];
+      try { localStorage.setItem('puretuner_privacy_lang', lang); } catch (e) {}
+    }
+    buttons.forEach(function (b) { b.addEventListener('click', function () { pick(b.dataset.lang); }); });
+    var initial = 'pt';
+    try {
+      var saved = localStorage.getItem('puretuner_privacy_lang');
+      if (saved) initial = saved;
+      else if (navigator.language) {
+        var code = navigator.language.slice(0, 2).toLowerCase();
+        if (code === 'en' || code === 'es') initial = code;
+      }
+    } catch (e) {}
+    pick(initial);
+  })();
+</script>
+</body>
+</html>
