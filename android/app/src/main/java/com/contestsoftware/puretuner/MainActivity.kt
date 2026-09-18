@@ -1,4 +1,4 @@
-package com.puretunerapp
+package com.contestsoftware.puretuner
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

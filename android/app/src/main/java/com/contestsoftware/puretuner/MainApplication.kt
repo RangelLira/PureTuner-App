@@ -1,4 +1,4 @@
-package com.puretunerapp
+package com.contestsoftware.puretuner
 
 import android.app.Application
 import com.facebook.react.PackageList
