@@ -24,10 +24,18 @@ export class AudioProcessor {
   private readonly silenceThreshold = 0.0015;
   private readonly soundThreshold = 0.003;
 
-  constructor(sampleRate = 22050, minFrequency = 60, maxFrequency = 1200) {
+  // Suavização exponencial (EMA) no domínio de cents entre frames — sem ela,
+  // cada janela de ~46ms gera uma leitura independente e o afinador "pula"
+  // de nota a nota com o ruído normal da autocorrelação. 0 = sem histórico
+  // ainda (primeiro frame após silêncio, segue a leitura crua na hora).
+  private smoothedFrequency = 0;
+  private readonly smoothingFactor: number;
+
+  constructor(sampleRate = 22050, minFrequency = 60, maxFrequency = 1200, smoothingFactor = 0.8) {
     this.sampleRate = sampleRate;
     this.minFrequency = minFrequency;
     this.maxFrequency = maxFrequency;
+    this.smoothingFactor = smoothingFactor;
     this.accumulatedBuffer = new Float32Array(this.targetBufferSize * 4);
     this.accumulatedSize = 0;
     this.downsampleBuffer = new Float32Array(
@@ -71,6 +79,7 @@ export class AudioProcessor {
       }
     } else if (volume < this.silenceThreshold) {
       this.isSilent = true;
+      this.smoothedFrequency = 0;
       result = { frequency: 0, volume, confidence: 0 };
     } else {
       result = this.detectPitch(buffer, volume);
@@ -95,6 +104,7 @@ export class AudioProcessor {
   public resetBuffer(): void {
     this.accumulatedSize = 0;
     this.isSilent = true;
+    this.smoothedFrequency = 0;
   }
 
   private downsampleInto(buffer: Float32Array, factor: number): number {
@@ -172,7 +182,32 @@ export class AudioProcessor {
     const frequency = sampleRate / refinedPeriod;
     if (!this.isValidMusicalFrequency(frequency)) return null;
 
-    return { frequency, volume, confidence };
+    return { frequency: this.applySmoothing(frequency), volume, confidence };
+  }
+
+  // EMA em log2(frequência) — média em cents, não em Hz, pra não enviesar a
+  // suavização entre oitavas diferentes (a mesma variação em cents equivale
+  // a saltos bem maiores em Hz nas cordas agudas). Saltos grandes (>70
+  // cents, mais que meio-tom) não são suavizados: nesse caso é troca de
+  // corda/nota de verdade, e arrastar a leitura pelo caminho pareceria uma
+  // afinação errada passageira.
+  private applySmoothing(frequency: number): number {
+    if (this.smoothedFrequency <= 0) {
+      this.smoothedFrequency = frequency;
+      return frequency;
+    }
+
+    const centsDelta = 1200 * Math.log2(frequency / this.smoothedFrequency);
+    if (Math.abs(centsDelta) > 70) {
+      this.smoothedFrequency = frequency;
+      return frequency;
+    }
+
+    const logSmoothed = Math.log2(this.smoothedFrequency);
+    const logNew = Math.log2(frequency);
+    const logResult = this.smoothingFactor * logSmoothed + (1 - this.smoothingFactor) * logNew;
+    this.smoothedFrequency = 2 ** logResult;
+    return this.smoothedFrequency;
   }
 
   private autocorrAt(buffer: Float32Array, period: number, n: number): number {
