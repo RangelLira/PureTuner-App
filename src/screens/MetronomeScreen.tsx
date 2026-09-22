@@ -13,7 +13,12 @@ import { colors } from '../constants/colors';
 import { MetronomeEngine } from '../services/MetronomeEngine';
 import { computeTapTempoBpm, TAP_TEMPO_IDLE_RESET_MS, TAP_TEMPO_MAX_SAMPLES } from '../services/TapTempo';
 
-Sound.setCategory('Playback');
+// mixWithOthers=true: sem isso, cada play() pede foco de áudio exclusivo
+// (AUDIOFOCUS_GAIN), o que pausa/abaixa outros apps tocando áudio (ex.: uma
+// faixa de estudo) — e também faz o próprio som do metrônomo ser pausado
+// quando outro app pede foco de volta. O metrônomo precisa conviver com
+// áudio externo nos dois sentidos (é pra isso que existe o tap tempo).
+Sound.setCategory('Playback', true);
 
 // 6/8 é composto: a unidade de tempo já é a colcheia, não a semínima —
 // por isso ganha seu próprio conjunto de subdivisões (rótulos e opções

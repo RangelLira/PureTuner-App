@@ -100,6 +100,15 @@ react-native-audio-record (PCM base64)
 - `services/TapTempo.test.ts` — BPM a partir de sequência de timestamps
   (intervalos regulares/irregulares, saturação 40–220 BPM, mínimo de
   2 toques).
+
+O teste "retomar depois de muito tempo em segundo plano" do
+`MetronomeEngine` pegou um bug real de rajada de catch-up (ver seção
+"Tela Metrônomo" abaixo) — vale ler o comentário do teste antes de mexer
+em `scheduleNext()`: `jest.runAllTimers()`/`advanceTimersByTime(20min)`
+não reproduzem esse bug (o motor nunca para de reagendar sozinho, então
+ou nunca converge, ou o relógio avança em sincronia com os ticks e
+mascara o atraso) — o teste força cada tick com `runOnlyPendingTimers()`
+e inspeciona o `delay` de cada novo `setTimeout` agendado.
 - `data/scaleShapesC.test.ts` / `data/chordShapesC.test.ts` — todo shape
   hardcoded, em toda tônica, comparado às classes de altura esperadas
   (via `@tonaljs/tonal` para escalas; intervalos musicais para acordes) —
@@ -202,6 +211,32 @@ Semínima nem Tercina. Mesmo mecanismo interno (`subdivisions: 1 | 2`),
 só troca rótulo e opções oferecidas no modal. Trocar de um compasso
 simples com subdivisão 3/4 (Tercina/Semicolcheia) pra 6/8 reseta a
 subdivisão pra 1 (Colcheia), já que esses valores não existem lá.
+
+**O metrônomo não pausa em segundo plano** (uso pretendido: estudar com
+um áudio externo tocando junto — é pra isso que o tap tempo existe, ver
+abaixo). Dois problemas vinham disso, os dois corrigidos:
+
+- *Rajada de "catch-up" ao voltar do segundo plano*: `MetronomeEngine.
+  scheduleNext()` agenda o próximo tique por tempo absoluto
+  (`phaseStartTime + ticksIntoPhase * tickIntervalMs`). Se o Android
+  suspende a JS thread por tempo suficiente (Doze/App Standby, ex.: uns
+  20min com a tela apagada), o único `setTimeout` pendente só dispara
+  quando o app volta — mas `expectedTime` continua calculado a partir da
+  fase antiga, agora muito no passado, então cada novo `scheduleNext()`
+  reagenda com `delay: 0` tentando "alcançar" o tempo real: uma rajada de
+  milhares de tiques em sequência (a "metralhadora", tocando som se
+  reprodução estiver funcionando — ver fix do `shrinkResources` acima).
+  `scheduleNext()` agora re-ancora a fase pro tique atual (mesmo
+  mecanismo que já existia pra troca de BPM em `setBpm()`) sempre que o
+  atraso passa de `tickIntervalMs * 2`, em vez de tentar recuperar os
+  tiques perdidos.
+- *Foco de áudio exclusivo*: `Sound.setCategory('Playback')` sem o 2º
+  parâmetro usa `mixWithOthers = false` — o `react-native-sound` (Android)
+  então pede `AUDIOFOCUS_GAIN` a cada `play()`, o que tende a pausar/
+  abaixar outros apps tocando áudio, e também pausa o próprio som do
+  metrônomo quando outro app pede foco de volta (`Sound.kt`,
+  `onAudioFocusChange`). Corrigido com
+  `Sound.setCategory('Playback', true)`.
 
 **Tap tempo**: tocar o círculo de BPM registra um timestamp; segurar
 (`onLongPress`, 500ms) abre o modal de digitar BPM manualmente — antes

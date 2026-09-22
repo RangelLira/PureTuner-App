@@ -77,8 +77,23 @@ export class MetronomeEngine {
   private scheduleNext(): void {
     const tickIntervalMs  = 60000 / this.bpm / this.subdivisions;
     const ticksIntoPhase  = this.tickCount - this.phaseStartTick;
-    const expectedTime    = this.phaseStartTime + ticksIntoPhase * tickIntervalMs;
-    const delay           = Math.max(0, expectedTime - Date.now());
+    let expectedTime      = this.phaseStartTime + ticksIntoPhase * tickIntervalMs;
+
+    // Se o app ficou tempo suficiente em segundo plano pra JS thread parar de
+    // rodar (Doze/App Standby), o setTimeout pendente só dispara ao voltar —
+    // mas expectedTime continua calculado a partir da fase antiga, agora
+    // muito no passado. Sem isso, cada scheduleNext() re-agendaria com delay
+    // 0 até "alcançar" o tempo real: uma rajada de milhares de tiques em
+    // sequência (a "metralhadora"). Re-ancora a fase pro agora em vez de
+    // tentar recuperar os tiques perdidos.
+    const now = Date.now();
+    if (now - expectedTime > tickIntervalMs * 2) {
+      this.phaseStartTime = now;
+      this.phaseStartTick = this.tickCount;
+      expectedTime = now;
+    }
+
+    const delay = Math.max(0, expectedTime - now);
 
     this.timerRef = setTimeout(() => {
       if (!this.isRunning) return;

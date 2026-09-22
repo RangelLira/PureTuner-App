@@ -176,6 +176,41 @@ describe('MetronomeEngine', () => {
     engine.stop();
   });
 
+  test('retomar depois de muito tempo em segundo plano não dispara rajada de catch-up', () => {
+    // jest.setSystemTime() pula o relógio sem mexer no timer já agendado —
+    // exatamente como a JS thread suspensa em segundo plano (Doze/App
+    // Standby): nenhum tick roda durante a suspensão, e o setTimeout
+    // pendente só dispara (com delay "elapsed") quando o app volta.
+    // jest.runOnlyPendingTimers() força esse único timer pendente a
+    // disparar sem recursão automática — por isso o teste inspeciona o
+    // `delay` de cada novo setTimeout agendado tick a tick, em vez de
+    // tentar deixar uma rajada rodar sozinha (o motor nunca para de
+    // reagendar, então jest.runAllTimers()/advanceTimersByTime(20min)
+    // não reproduzem o bug real: ou nunca convergem, ou avançam o
+    // relógio em sincronia com os ticks e mascaram o atraso).
+    const engine = new MetronomeEngine();
+    engine.setBpm(120); // 500ms/tick
+    engine.start(jest.fn());
+    flushImmediateTick();
+
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    setTimeoutSpy.mockClear();
+
+    jest.setSystemTime(Date.now() + 20 * 60 * 1000);
+    for (let i = 0; i < 4; i++) jest.runOnlyPendingTimers();
+
+    const delays = setTimeoutSpy.mock.calls.map(c => c[1]);
+    // Sem a re-ancoragem: [0, 0, 0, 0] — cada tique reagenda outro
+    // imediato tentando "alcançar" o tempo real, a rajada de metralhadora.
+    // Com a re-ancoragem: só o 1º tique (o já pendente) sai a 0ms; os
+    // seguintes voltam ao intervalo normal do BPM (~500ms).
+    expect(delays[0]).toBe(0);
+    expect(delays.slice(1).every(d => Number(d) > 400)).toBe(true);
+
+    setTimeoutSpy.mockRestore();
+    engine.stop();
+  });
+
   test('mudar o compasso, a subdivisão ou o BPM não lança erro num motor já parado', () => {
     const engine = new MetronomeEngine();
     expect(() => {
