@@ -219,10 +219,22 @@ contínuo sem sentido de compasso — por isso `MetronomeScreen` checa
 **6/8 é composto**: a unidade de tempo já é a colcheia, não a semínima —
 por isso tem seu próprio conjunto de subdivisões (`COMPOUND_SUBDIVISIONS`
 em `MetronomeScreen.tsx`): só Colcheia (1) e Semicolcheia (2), sem
-Semínima nem Tercina. Mesmo mecanismo interno (`subdivisions: 1 | 2`),
-só troca rótulo e opções oferecidas no modal. Trocar de um compasso
-simples com subdivisão 3/4 (Tercina/Semicolcheia) pra 6/8 reseta a
-subdivisão pra 1 (Colcheia), já que esses valores não existem lá.
+Semínima nem Tercina. Mesmo mecanismo interno de contagem
+(`subdivisions: 1 | 2`), só troca rótulo e opções oferecidas no modal.
+Trocar de um compasso simples com subdivisão 3/4 (Tercina/Semicolcheia)
+pra 6/8 reseta a subdivisão pra 1 (Colcheia), já que esses valores não
+existem lá.
+
+A **duração** de cada clique em 6/8, porém, não é igual à de 1/4-4/4:
+`MetronomeEngine.compoundFactor` (setado via `eng.setCompound(beats ===
+COMPOUND_BEATS)` em `startEngine()`) divide o intervalo por mais um fator
+de 3 quando composto — pela equivalência clássica de "modulação métrica",
+um compasso 6/8 em colcheia (6 cliques audíveis) dura o mesmo tempo total
+que um 2/4 em tercina (2 tempos × 3), então a colcheia do 6/8 tem que
+durar exatamente 1/3 da semínima de referência, não a semínima inteira.
+Sem isso, `beatsPerMeasure=6` com `subdivisions=1` faria cada uma das 6
+bolinhas durar um tempo cheio (`60000/bpm`) — um 6/8 3× mais lento do que
+deveria no mesmo BPM. Testado em `MetronomeEngine.test.ts`.
 
 **O metrônomo não pausa em segundo plano** (uso pretendido: estudar com
 um áudio externo tocando junto — é pra isso que o tap tempo existe, ver

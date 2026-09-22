@@ -83,6 +83,69 @@ describe('MetronomeEngine', () => {
     expect(subBeats).toEqual([1, 2, 1, 2]);
   });
 
+  test('6/8 em colcheia usa o mesmo intervalo que 2/4 em tercina, no mesmo BPM', () => {
+    // Equivalência clássica de modulação métrica: um compasso 6/8 (6
+    // colcheias) e um 2/4 em tercina (2 tempos × 3) têm os dois 6 cliques
+    // audíveis por compasso — pra durarem o mesmo tempo total, cada
+    // colcheia do 6/8 precisa durar exatamente o mesmo que a colcheia de
+    // tercina do 2/4 (1/3 da semínima), não uma semínima inteira.
+    const bpm = 120;
+    const tercinaInterval = 60000 / bpm / 3; // colcheia de tercina em 2/4
+
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(bpm);
+    engine.setTimeSignature(6);
+    engine.setSubdivisions(1); // Colcheia
+    engine.setCompound(true);
+    engine.start(onTick);
+    flushImmediateTick();
+    expect(onTick).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(tercinaInterval);
+    expect(onTick).toHaveBeenCalledTimes(2);
+    jest.advanceTimersByTime(tercinaInterval);
+    expect(onTick).toHaveBeenCalledTimes(3);
+
+    engine.stop();
+  });
+
+  test('6/8 em semicolcheia dobra a velocidade da colcheia (metade do intervalo)', () => {
+    const bpm = 120;
+    const semicolcheiaInterval = 60000 / bpm / 6; // metade da colcheia de tercina
+
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(bpm);
+    engine.setTimeSignature(6);
+    engine.setSubdivisions(2); // Semicolcheia
+    engine.setCompound(true);
+    engine.start(onTick);
+    flushImmediateTick();
+
+    jest.advanceTimersByTime(semicolcheiaInterval);
+    expect(onTick).toHaveBeenCalledTimes(2);
+    jest.advanceTimersByTime(semicolcheiaInterval);
+    expect(onTick).toHaveBeenCalledTimes(3);
+
+    engine.stop();
+  });
+
+  test('setCompound(false) (compassos simples) não muda o intervalo — 4/4 continua igual', () => {
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(120); // 500ms/tick
+    engine.setTimeSignature(4);
+    engine.setCompound(false);
+    engine.start(onTick);
+    flushImmediateTick();
+
+    jest.advanceTimersByTime(500);
+    expect(onTick).toHaveBeenCalledTimes(2);
+
+    engine.stop();
+  });
+
   test('setSubdivisions satura em [1, 4]', () => {
     const engine = new MetronomeEngine();
     engine.setBpm(200);

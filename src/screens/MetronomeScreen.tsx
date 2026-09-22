@@ -210,6 +210,7 @@ export function MetronomeScreen() {
       eng.setBpm(currentBpm);
       eng.setTimeSignature(beats);
       eng.setSubdivisions(subs);
+      eng.setCompound(beats === COMPOUND_BEATS);
       eng.start((beat, subBeat, isDownbeat) => {
         // ─────────────────────────────────────────────────────────────
         // CRITICAL: no setState here. Only ref updates + sound + Animated.
