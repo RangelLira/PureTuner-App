@@ -50,7 +50,7 @@ const COMPOUND_SUBDIVISIONS: SubdivisionOption[] = [
 const BPM_CIRCLE = 152;
 const BPM_BTN    = 62;
 const MOL_SPACER = BPM_CIRCLE - 20;
-const CONFIG_W   = BPM_BTN * 2 + MOL_SPACER; // aligns chips with ± buttons
+const CONFIG_W   = BPM_BTN * 2 + MOL_SPACER; // largura dos chips de compasso/subdivisão
 
 function buildDots(beats: number, subs: number) {
   const dots: Array<{ type: 'beat' | 'sub'; beatNum: number; subBeat: number }> = [];
@@ -305,24 +305,9 @@ export function MetronomeScreen() {
         })}
       </View>
 
-      {/* BPM Molecule */}
+      {/* BPM Molecule — [-] [círculo grande] [+] numa única linha horizontal */}
       <View style={styles.molecule}>
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity
-            style={styles.bpmCircle}
-            onPress={handleTap}
-            onLongPress={() => { setBpmInputText(String(bpm)); setShowBpmInput(true); }}
-            delayLongPress={500}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.bpmValue}>{bpm}</Text>
-            <Text style={styles.bpmUnit}>BPM</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Text style={styles.tapHint}>Toque para marcar o tempo · segure para digitar</Text>
-
-        <View style={styles.bpmBtnsRow}>
+        <View style={styles.bpmRow}>
           <TouchableOpacity
             style={styles.bpmBtn}
             onPress={() => updateBpm(bpm - 1)}
@@ -332,7 +317,20 @@ export function MetronomeScreen() {
           >
             <Text style={styles.bpmBtnText}>−</Text>
           </TouchableOpacity>
-          <View style={styles.molSpacer} />
+
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <TouchableOpacity
+              style={styles.bpmCircle}
+              onPress={handleTap}
+              onLongPress={() => { setBpmInputText(String(bpm)); setShowBpmInput(true); }}
+              delayLongPress={500}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bpmValue}>{bpm}</Text>
+              <Text style={styles.bpmUnit}>BPM</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
           <TouchableOpacity
             style={styles.bpmBtn}
             onPress={() => updateBpm(bpm + 1)}
@@ -343,6 +341,8 @@ export function MetronomeScreen() {
             <Text style={styles.bpmBtnText}>+</Text>
           </TouchableOpacity>
         </View>
+
+        <Text style={styles.tapHint}>Toque para marcar o tempo · segure para digitar</Text>
       </View>
 
       {/* Config — same width as ± buttons row */}
@@ -521,10 +521,11 @@ const styles = StyleSheet.create({
     color: colors.neutral.mediumGray,
     letterSpacing: 2,
   },
-  bpmBtnsRow: {
+  bpmRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: -10,
+    justifyContent: 'center',
+    gap: 14,
   },
   bpmBtn: {
     width: BPM_BTN,
@@ -546,12 +547,10 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     includeFontPadding: false,
   },
-  molSpacer: { width: MOL_SPACER },
   tapHint: {
     fontSize: 12,
     color: colors.neutral.mediumGray,
-    marginTop: 8,
-    marginBottom: -4,
+    marginTop: 10,
   },
 
   configArea: { width: CONFIG_W, gap: 10 },
