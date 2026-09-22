@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Os sons do metrônomo são carregados pelo react-native-sound passando o
+  nome do arquivo como string em runtime (Sound.MAIN_BUNDLE), não por
+  referência estática (R.raw.x). O shrinkResources do R8 (build.gradle,
+  enableProguardInReleaseBuilds) não enxerga esse tipo de referência e
+  removia os 3 arquivos da build de release, deixando o metrônomo mudo.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/metro_accent,@raw/metro_click,@raw/metro_hi" />
