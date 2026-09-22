@@ -30,6 +30,18 @@ Isso já aconteceu com os sons do metrônomo: corrigido com
 qualquer recurso nativo carregado por string, adicionar no `keep.xml` —
 e conferir com `unzip -l app-release.apk | grep raw/` se sumiu.
 
+**Segunda pegadinha, separada da primeira**: mesmo com `keep.xml`
+impedindo a remoção, o `shrinkResources` por padrão também RENOMEIA os
+recursos que sobrevivem (ex.: `res/raw/metro_accent.wav` vira
+`res/Ds.wav`) pra encolher a tabela `resources.arsc` — isso quebra
+igualmente qualquer lookup por string em runtime, só que trocando
+"removido" por "nome errado". Desligado via
+`android.enableResourceOptimizations=false` no `gradle.properties`
+(afeta só essa renomeação; a remoção de recursos de verdade não usados
+continua funcionando normalmente). Sempre conferir com
+`unzip -l app-release.apk | grep raw/` se o **nome** bate, não só se o
+arquivo existe.
+
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
