@@ -11,16 +11,36 @@ import {
 import Sound from 'react-native-sound';
 import { colors } from '../constants/colors';
 import { MetronomeEngine } from '../services/MetronomeEngine';
+import { computeTapTempoBpm, TAP_TEMPO_IDLE_RESET_MS, TAP_TEMPO_MAX_SAMPLES } from '../services/TapTempo';
 
 Sound.setCategory('Playback');
 
-const TIME_SIGNATURES = [2, 3, 4] as const;
-const SUBDIVISIONS = [
+// 6/8 é composto: a unidade de tempo já é a colcheia, não a semínima —
+// por isso ganha seu próprio conjunto de subdivisões (rótulos e opções
+// diferentes de 1/4-4/4, mesmo mecanismo interno de subdivisions 1|2).
+const COMPOUND_BEATS = 6;
+
+const TIME_SIGNATURES = [
+  { beats: 1, label: '1/4' },
+  { beats: 2, label: '2/4' },
+  { beats: 3, label: '3/4' },
+  { beats: 4, label: '4/4' },
+  { beats: COMPOUND_BEATS, label: '6/8' },
+] as const;
+
+interface SubdivisionOption { value: number; label: string }
+
+const SIMPLE_SUBDIVISIONS: SubdivisionOption[] = [
   { value: 1, label: 'Semínima'     },
   { value: 2, label: 'Colcheia'     },
   { value: 3, label: 'Tercina'      },
   { value: 4, label: 'Semicolcheia' },
-] as const;
+];
+
+const COMPOUND_SUBDIVISIONS: SubdivisionOption[] = [
+  { value: 1, label: 'Colcheia'     },
+  { value: 2, label: 'Semicolcheia' },
+];
 
 const BPM_CIRCLE = 152;
 const BPM_BTN    = 62;
@@ -52,11 +72,12 @@ function poolPlay(
 
 export function MetronomeScreen() {
   const [bpm, setBpm]                         = useState(120);
-  const [beatsPerMeasure, setBeatsPerMeasure] = useState<2 | 3 | 4>(4);
+  const [beatsPerMeasure, setBeatsPerMeasure] = useState<1 | 2 | 3 | 4 | 6>(4);
   const [subdivisions, setSubdivisions]       = useState(1);
   const [isPlaying, setIsPlaying]             = useState(false);
   const [activeBeat, setActiveBeat]           = useState(0);
   const [activeSubBeat, setActiveSubBeat]     = useState(0);
+  const [showSigModal, setShowSigModal]       = useState(false);
   const [showSubModal, setShowSubModal]       = useState(false);
   const [showBpmInput, setShowBpmInput]       = useState(false);
   const [bpmInputText, setBpmInputText]       = useState('120');
@@ -64,6 +85,7 @@ export function MetronomeScreen() {
   const engineRef  = useRef(new MetronomeEngine());
   const pulseAnim  = useRef(new Animated.Value(1)).current;
   const bpmHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tapTimestampsRef = useRef<number[]>([]);
 
   // Sound pools — 2 instances each to allow overlap-free retriggering
   const accentPool = useRef<Sound[]>([]);
@@ -135,6 +157,21 @@ export function MetronomeScreen() {
     engineRef.current.setBpm(v);
   }, []);
 
+  const handleTap = useCallback(() => {
+    const now = Date.now();
+    const taps = tapTimestampsRef.current;
+    if (taps.length > 0 && now - taps[taps.length - 1] > TAP_TEMPO_IDLE_RESET_MS) {
+      taps.length = 0;
+    }
+    taps.push(now);
+    if (taps.length > TAP_TEMPO_MAX_SAMPLES) taps.shift();
+
+    pulseBpm();
+
+    const tapped = computeTapTempoBpm(taps);
+    if (tapped !== null) updateBpm(tapped);
+  }, [pulseBpm, updateBpm]);
+
   const startHold = useCallback((delta: number) => {
     bpmHoldRef.current = setInterval(() => {
       setBpm(prev => {
@@ -176,8 +213,11 @@ export function MetronomeScreen() {
         // ─────────────────────────────────────────────────────────────
         currentTickRef.current = { beat, subBeat };
         if (subBeat === 1) {
-          if (isDownbeat) {
-            pulseBpm(); // pulse only once per measure
+          if (isDownbeat) pulseBpm(); // pulse a cada tempo 1 (em 1/4, todo tempo é tempo 1)
+          // Em 1/4 todo tempo é "tempo 1" — acentuar cada um soaria como um
+          // clique contínuo sem sentido de compasso, então usa som fraco.
+          const useAccent = isDownbeat && beats > 1;
+          if (useAccent) {
             poolPlay(accentPool.current, accentIdx.current);
           } else {
             poolPlay(clickPool.current, clickIdx.current);
@@ -202,9 +242,16 @@ export function MetronomeScreen() {
   }, [isPlaying, beatsPerMeasure, subdivisions, bpm, pulseAnim, startEngine]);
 
   const changeSignature = useCallback(
-    (beats: 2 | 3 | 4) => {
+    (beats: 1 | 2 | 3 | 4 | 6) => {
       setBeatsPerMeasure(beats);
-      if (isPlaying) startEngine(beats, subdivisions, bpm);
+      setShowSigModal(false);
+
+      // 6/8 só tem Colcheia/Semicolcheia (1|2) — Tercina/Semicolcheia de
+      // compasso simples (3|4) não existem nesse conjunto.
+      const clampedSubs = beats === COMPOUND_BEATS && subdivisions > 2 ? 1 : subdivisions;
+      if (clampedSubs !== subdivisions) setSubdivisions(clampedSubs);
+
+      if (isPlaying) startEngine(beats, clampedSubs, bpm);
     },
     [isPlaying, subdivisions, bpm, startEngine],
   );
@@ -221,7 +268,10 @@ export function MetronomeScreen() {
   useEffect(() => () => stopHold(), [stopHold]);
 
   const dots     = buildDots(beatsPerMeasure, subdivisions);
-  const subLabel = SUBDIVISIONS.find(s => s.value === subdivisions)?.label ?? 'Semínima';
+  const isCompound = beatsPerMeasure === COMPOUND_BEATS;
+  const activeSubdivisions = isCompound ? COMPOUND_SUBDIVISIONS : SIMPLE_SUBDIVISIONS;
+  const subLabel = activeSubdivisions.find(s => s.value === subdivisions)?.label ?? activeSubdivisions[0].label;
+  const sigLabel = TIME_SIGNATURES.find(s => s.beats === beatsPerMeasure)?.label ?? '4/4';
 
   return (
     <View style={styles.container}>
@@ -254,13 +304,17 @@ export function MetronomeScreen() {
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <TouchableOpacity
             style={styles.bpmCircle}
-            onPress={() => { setBpmInputText(String(bpm)); setShowBpmInput(true); }}
+            onPress={handleTap}
+            onLongPress={() => { setBpmInputText(String(bpm)); setShowBpmInput(true); }}
+            delayLongPress={500}
             activeOpacity={0.85}
           >
             <Text style={styles.bpmValue}>{bpm}</Text>
             <Text style={styles.bpmUnit}>BPM</Text>
           </TouchableOpacity>
         </Animated.View>
+
+        <Text style={styles.tapHint}>Toque para marcar o tempo · segure para digitar</Text>
 
         <View style={styles.bpmBtnsRow}>
           <TouchableOpacity
@@ -287,20 +341,13 @@ export function MetronomeScreen() {
 
       {/* Config — same width as ± buttons row */}
       <View style={styles.configArea}>
-        <View style={styles.sigRow}>
-          {TIME_SIGNATURES.map(beats => (
-            <TouchableOpacity
-              key={beats}
-              style={[styles.sigChip, beatsPerMeasure === beats && styles.sigChipActive]}
-              onPress={() => changeSignature(beats)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.sigChipText, beatsPerMeasure === beats && styles.sigChipTextActive]}>
-                {beats}/4
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={styles.subChip}
+          onPress={() => setShowSigModal(true)}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.subChipText}>{sigLabel}</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.subChip}
           onPress={() => setShowSubModal(true)}
@@ -323,12 +370,33 @@ export function MetronomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Time signature modal */}
+      <Modal visible={showSigModal} transparent animationType="fade" onRequestClose={() => setShowSigModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowSigModal(false)} activeOpacity={1}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Compasso</Text>
+            {TIME_SIGNATURES.map(opt => (
+              <TouchableOpacity
+                key={opt.beats}
+                style={[styles.modalOption, beatsPerMeasure === opt.beats && styles.modalOptionActive]}
+                onPress={() => changeSignature(opt.beats)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.modalOptionText, beatsPerMeasure === opt.beats && styles.modalOptionTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Subdivision modal */}
       <Modal visible={showSubModal} transparent animationType="fade" onRequestClose={() => setShowSubModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowSubModal(false)} activeOpacity={1}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Subdivisão</Text>
-            {SUBDIVISIONS.map(opt => (
+            {activeSubdivisions.map(opt => (
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.modalOption, subdivisions === opt.value && styles.modalOptionActive]}
@@ -473,24 +541,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   molSpacer: { width: MOL_SPACER },
+  tapHint: {
+    fontSize: 12,
+    color: colors.neutral.mediumGray,
+    marginTop: 8,
+    marginBottom: -4,
+  },
 
   configArea: { width: CONFIG_W, gap: 10 },
-  sigRow: { flexDirection: 'row', gap: 10 },
-  sigChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 24,
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1.5,
-    borderColor: '#D0D0D0',
-  },
-  sigChipActive: {
-    backgroundColor: colors.secondary.darkBlue,
-    borderColor: colors.secondary.darkBlue,
-  },
-  sigChipText: { fontSize: 15, fontWeight: '700', color: colors.secondary.darkBlue },
-  sigChipTextActive: { color: colors.neutral.white },
   subChip: {
     width: '100%',
     alignItems: 'center',

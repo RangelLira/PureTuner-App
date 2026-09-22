@@ -20,6 +20,16 @@ precisar testar num emulador x86_64, gere um build com
 `reactNativeArchitectures` incluindo `x86_64` outra vez, ou use um
 emulador/dispositivo arm64.
 
+**Cuidado com `shrinkResources` e recursos carregados por nome via
+string** (ex.: `react-native-sound` recebendo `'metro_accent.wav'` em
+runtime) — o R8 só enxerga referências estáticas (`R.raw.x`), então
+qualquer `res/raw/*` referenciado só por string é removido da build de
+release silenciosamente (o app compila e roda normal, só o efeito some).
+Isso já aconteceu com os sons do metrônomo: corrigido com
+`android/app/src/main/res/raw/keep.xml` (`tools:keep`). Ao adicionar
+qualquer recurso nativo carregado por string, adicionar no `keep.xml` —
+e conferir com `unzip -l app-release.apk | grep raw/` se sumiu.
+
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
@@ -36,7 +46,8 @@ src/
 │   ├── RealAudioCapture.ts   # Captura PCM via react-native-audio-record
 │   ├── AudioProcessor.ts     # Acumula amostras, silence gate, autocorrelação
 │   ├── PitchDetector.ts      # Frequência → nota + cents offset
-│   └── MetronomeEngine.ts    # Motor do metrônomo (drift correction, re-ancoragem de fase)
+│   ├── MetronomeEngine.ts    # Motor do metrônomo (drift correction, re-ancoragem de fase)
+│   └── TapTempo.ts           # Cálculo puro de BPM a partir de timestamps de toques
 ├── hooks/
 │   ├── useTuner.ts           # Orquestra o pipeline, expõe estado à UI
 │   └── useLeftHanded.ts      # Preferência de canhoto, persistida via AsyncStorage
@@ -86,6 +97,9 @@ react-native-audio-record (PCM base64)
 - `services/PitchDetector.test.ts` — frequência → nota + cents.
 - `services/MetronomeEngine.test.ts` — timing com fake timers do Jest
   (BPM, compasso, subdivisões, re-ancoragem de fase, saturação de BPM).
+- `services/TapTempo.test.ts` — BPM a partir de sequência de timestamps
+  (intervalos regulares/irregulares, saturação 40–220 BPM, mínimo de
+  2 toques).
 - `data/scaleShapesC.test.ts` / `data/chordShapesC.test.ts` — todo shape
   hardcoded, em toda tônica, comparado às classes de altura esperadas
   (via `@tonaljs/tonal` para escalas; intervalos musicais para acordes) —
@@ -108,7 +122,7 @@ para testar `/2`, `/3` e `/4`.
 | Tela        | Estado               | Notas                                                    |
 |-------------|----------------------|-----------------------------------------------------------|
 | Afinador    | Funcional            | Spring physics na agulha, keep-screen-on ativo enquanto ouve |
-| Metrônomo   | Funcional            | Círculos de beat, BPM editável, drift correction           |
+| Metrônomo   | Funcional            | Círculos de beat, tap tempo, drift correction, compassos 1/4-4/4 e 6/8 (ver seção abaixo) |
 | Acordes     | Funcional            | Busca por prefixo + 5 shapes CAGED + modo canhoto (ver seção abaixo) |
 | Escalas     | Funcional            | Círculo de tom + 16 escalas × 5 shapes + modo canhoto       |
 | Sobre       | Funcional            | Botão "?" flutuante, modal em `AboutScreen.tsx`             |
@@ -165,6 +179,40 @@ A busca ("Buscar acorde") filtra por prefixo (`startsWith`, não
 achatada de todo tom × qualidade. Trocar só o tom pelo círculo preserva a
 qualidade atual (Dm → B vira Bm), com fallback pra `major` se a qualidade
 não existir nesse tom.
+
+## Tela Metrônomo
+
+**Compassos**: `MetronomeEngine` só entende "tempos por compasso"
+(`beatsPerMeasure`) e "cliques por tempo" (`subdivisions`) — não tem
+noção de numerador/denominador. Por isso 1/4 é só `beatsPerMeasure = 1`
+e 6/8 é só `beatsPerMeasure = 6`, sem mudar o engine. Um único chip (que
+abre modal, igual ao de subdivisão) substitui os antigos chips soltos de
+2/4-3/4-4/4 e lista as 5 opções: 1/4, 2/4, 3/4, 4/4, 6/8.
+
+**1/4 tem som fraco**: como todo tempo em 1/4 é tecnicamente "tempo 1"
+(`isDownbeat` sempre true), acentuar cada um soaria como um clique
+contínuo sem sentido de compasso — por isso `MetronomeScreen` checa
+`beats > 1` antes de tocar `accentPool`; em 1/4 toca sempre `clickPool`
+(o pulso visual do círculo de BPM continua a cada tempo).
+
+**6/8 é composto**: a unidade de tempo já é a colcheia, não a semínima —
+por isso tem seu próprio conjunto de subdivisões (`COMPOUND_SUBDIVISIONS`
+em `MetronomeScreen.tsx`): só Colcheia (1) e Semicolcheia (2), sem
+Semínima nem Tercina. Mesmo mecanismo interno (`subdivisions: 1 | 2`),
+só troca rótulo e opções oferecidas no modal. Trocar de um compasso
+simples com subdivisão 3/4 (Tercina/Semicolcheia) pra 6/8 reseta a
+subdivisão pra 1 (Colcheia), já que esses valores não existem lá.
+
+**Tap tempo**: tocar o círculo de BPM registra um timestamp; segurar
+(`onLongPress`, 500ms) abre o modal de digitar BPM manualmente — antes
+era o toque simples que abria esse modal. O cálculo do BPM a partir dos
+timestamps é uma função pura testada isoladamente
+(`computeTapTempoBpm` em `src/services/TapTempo.ts`): média dos
+intervalos entre os últimos 8 toques, precisa de 2+ toques, satura em
+40–220 BPM (mesmo range do `MetronomeEngine`). A sequência de toques
+reseta se passar 2s sem novo toque (`TAP_TEMPO_IDLE_RESET_MS`) — implementado
+como `useRef` em `MetronomeScreen` (não é estado React: atualiza a cada
+toque sem re-render).
 
 ## Design System
 - **Cores** em `src/constants/colors.ts` — Primary: `#FF6B35` (laranja)
