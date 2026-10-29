@@ -357,9 +357,9 @@ const styles = StyleSheet.create({
     marginHorizontal: -24,
   },
   indicatorRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginBottom: 8,
   },
   shapeIndicator: {
@@ -368,13 +368,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   handChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 16,
     backgroundColor: colors.secondary.darkBlue,
   },
   handChipText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.neutral.white,
   },
@@ -444,7 +444,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    justifyContent: 'center',
+    // Largura fixa pra exatamente 4 colunas (4×56 + 3×10 de gap) — sem
+    // isso o flexWrap quebra a linha onde a largura da tela permitir,
+    // dando grades inconsistentes tipo 5-5-2 em vez de 4-4-4.
+    width: 254,
+    justifyContent: 'flex-start',
     marginBottom: 20,
   },
   noteGridChip: {
@@ -485,6 +489,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.secondary.darkBlue,
     fontWeight: '500',
+    textAlign: 'center',
   },
   scaleListTextActive: {
     color: colors.neutral.white,

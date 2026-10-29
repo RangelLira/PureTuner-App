@@ -11,6 +11,14 @@ export class MetronomeEngine {
   private isRunning = false;
   private tickCount = 0;
 
+  // Compassos compostos (6/8): a "colcheia" de base já é 1/3 da semínima
+  // de referência (mesma equivalência de "modulação métrica" que faz um
+  // 6/8 soar igual a um 2/4 em tercina contínua) — não 1/1 como em
+  // 1/4-4/4. beatsPerMeasure continua 6 (as 6 bolinhas visuais, sem
+  // agrupamento em 2 tempos pontuados) só a duração de cada clique muda.
+  private compoundFactor = 1;
+  private static readonly COMPOUND_SUBDIVISION_FACTOR = 3;
+
   // Phase reference: when BPM changes mid-run we start a new phase so the
   // absolute-time drift correction doesn't "catch up" from the old tempo.
   private phaseStartTime = 0;  // wall-clock time when this BPM phase began
@@ -58,7 +66,7 @@ export class MetronomeEngine {
     clearTimeout(this.timerRef);
     this.timerRef = null;
 
-    const newInterval = 60000 / this.bpm / this.subdivisions;
+    const newInterval = this.tickIntervalMs();
     const lastFired   = this.lastTickTime > 0 ? this.lastTickTime : this.phaseStartTime;
 
     this.phaseStartTime = lastFired + newInterval; // next tick target
@@ -74,11 +82,34 @@ export class MetronomeEngine {
     this.subdivisions = Math.max(1, Math.min(4, n));
   }
 
+  setCompound(isCompound: boolean): void {
+    this.compoundFactor = isCompound ? MetronomeEngine.COMPOUND_SUBDIVISION_FACTOR : 1;
+  }
+
+  private tickIntervalMs(): number {
+    return 60000 / this.bpm / this.subdivisions / this.compoundFactor;
+  }
+
   private scheduleNext(): void {
-    const tickIntervalMs  = 60000 / this.bpm / this.subdivisions;
+    const tickIntervalMs  = this.tickIntervalMs();
     const ticksIntoPhase  = this.tickCount - this.phaseStartTick;
-    const expectedTime    = this.phaseStartTime + ticksIntoPhase * tickIntervalMs;
-    const delay           = Math.max(0, expectedTime - Date.now());
+    let expectedTime      = this.phaseStartTime + ticksIntoPhase * tickIntervalMs;
+
+    // Se o app ficou tempo suficiente em segundo plano pra JS thread parar de
+    // rodar (Doze/App Standby), o setTimeout pendente só dispara ao voltar —
+    // mas expectedTime continua calculado a partir da fase antiga, agora
+    // muito no passado. Sem isso, cada scheduleNext() re-agendaria com delay
+    // 0 até "alcançar" o tempo real: uma rajada de milhares de tiques em
+    // sequência (a "metralhadora"). Re-ancora a fase pro agora em vez de
+    // tentar recuperar os tiques perdidos.
+    const now = Date.now();
+    if (now - expectedTime > tickIntervalMs * 2) {
+      this.phaseStartTime = now;
+      this.phaseStartTick = this.tickCount;
+      expectedTime = now;
+    }
+
+    const delay = Math.max(0, expectedTime - now);
 
     this.timerRef = setTimeout(() => {
       if (!this.isRunning) return;

@@ -27,7 +27,12 @@ export function useTuner() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    audioProcessor.current = new AudioProcessor(TUNER_CONFIG.sampleRate);
+    audioProcessor.current = new AudioProcessor(
+      TUNER_CONFIG.sampleRate,
+      undefined,
+      undefined,
+      TUNER_CONFIG.smoothingFactor,
+    );
     pitchDetector.current = new PitchDetector(TUNER_CONFIG.centTolerance);
     audioCapture.current = new RealAudioCapture({
       sampleRate: TUNER_CONFIG.sampleRate,

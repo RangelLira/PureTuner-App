@@ -75,6 +75,17 @@ const ALL_CHORDS: SearchResult[] = NOTES.flatMap(note => {
   }));
 });
 
+// Estado da tela de Acordes já apontando para um acorde específico — usado
+// pela Tela Campo Harmônico ao tocar num acorde do campo. `pc` é a classe de
+// altura (0 = Dó), já que a grafia do campo (ex.: Mi♯, Sol♭) não existe na
+// lista de tons desta tela.
+export function chordsStateFor(pc: number, suffix: string): ChordsState {
+  const tonic = NOTES[((pc % 12) + 12) % 12];
+  const entries = ((guitarData as any).chords[CHORD_DB_KEY[tonic]] ?? []) as ChordEntry[];
+  const idx = entries.findIndex(e => e.suffix === suffix);
+  return { tonic, suffixIdx: idx >= 0 ? idx : 0, posIdx: 0 };
+}
+
 function normalizeQuery(text: string) {
   return text.toLowerCase().replace(/[\s()]+/g, '');
 }
@@ -484,9 +495,9 @@ const styles = StyleSheet.create({
     marginHorizontal: -24,
   },
   indicatorRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginBottom: 8,
   },
   shapeIndicator: {
@@ -495,13 +506,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   handChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 16,
     backgroundColor: colors.secondary.darkBlue,
   },
   handChipText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.neutral.white,
   },
@@ -580,7 +591,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    justifyContent: 'center',
+    // Largura fixa pra exatamente 4 colunas (4×56 + 3×10 de gap) — sem
+    // isso o flexWrap quebra a linha onde a largura da tela permitir,
+    // dando grades inconsistentes tipo 5-5-2 em vez de 4-4-4.
+    width: 254,
+    justifyContent: 'flex-start',
     marginBottom: 20,
   },
   noteGridChip: {

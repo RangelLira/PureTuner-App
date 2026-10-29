@@ -83,6 +83,69 @@ describe('MetronomeEngine', () => {
     expect(subBeats).toEqual([1, 2, 1, 2]);
   });
 
+  test('6/8 em colcheia usa o mesmo intervalo que 2/4 em tercina, no mesmo BPM', () => {
+    // Equivalência clássica de modulação métrica: um compasso 6/8 (6
+    // colcheias) e um 2/4 em tercina (2 tempos × 3) têm os dois 6 cliques
+    // audíveis por compasso — pra durarem o mesmo tempo total, cada
+    // colcheia do 6/8 precisa durar exatamente o mesmo que a colcheia de
+    // tercina do 2/4 (1/3 da semínima), não uma semínima inteira.
+    const bpm = 120;
+    const tercinaInterval = 60000 / bpm / 3; // colcheia de tercina em 2/4
+
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(bpm);
+    engine.setTimeSignature(6);
+    engine.setSubdivisions(1); // Colcheia
+    engine.setCompound(true);
+    engine.start(onTick);
+    flushImmediateTick();
+    expect(onTick).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(tercinaInterval);
+    expect(onTick).toHaveBeenCalledTimes(2);
+    jest.advanceTimersByTime(tercinaInterval);
+    expect(onTick).toHaveBeenCalledTimes(3);
+
+    engine.stop();
+  });
+
+  test('6/8 em semicolcheia dobra a velocidade da colcheia (metade do intervalo)', () => {
+    const bpm = 120;
+    const semicolcheiaInterval = 60000 / bpm / 6; // metade da colcheia de tercina
+
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(bpm);
+    engine.setTimeSignature(6);
+    engine.setSubdivisions(2); // Semicolcheia
+    engine.setCompound(true);
+    engine.start(onTick);
+    flushImmediateTick();
+
+    jest.advanceTimersByTime(semicolcheiaInterval);
+    expect(onTick).toHaveBeenCalledTimes(2);
+    jest.advanceTimersByTime(semicolcheiaInterval);
+    expect(onTick).toHaveBeenCalledTimes(3);
+
+    engine.stop();
+  });
+
+  test('setCompound(false) (compassos simples) não muda o intervalo — 4/4 continua igual', () => {
+    const engine = new MetronomeEngine();
+    const onTick = jest.fn();
+    engine.setBpm(120); // 500ms/tick
+    engine.setTimeSignature(4);
+    engine.setCompound(false);
+    engine.start(onTick);
+    flushImmediateTick();
+
+    jest.advanceTimersByTime(500);
+    expect(onTick).toHaveBeenCalledTimes(2);
+
+    engine.stop();
+  });
+
   test('setSubdivisions satura em [1, 4]', () => {
     const engine = new MetronomeEngine();
     engine.setBpm(200);
@@ -173,6 +236,41 @@ describe('MetronomeEngine', () => {
     jest.advanceTimersByTime(2);
     expect(onTick).toHaveBeenCalledTimes(3); // exatamente um tick, sem rajada de catch-up
 
+    engine.stop();
+  });
+
+  test('retomar depois de muito tempo em segundo plano não dispara rajada de catch-up', () => {
+    // jest.setSystemTime() pula o relógio sem mexer no timer já agendado —
+    // exatamente como a JS thread suspensa em segundo plano (Doze/App
+    // Standby): nenhum tick roda durante a suspensão, e o setTimeout
+    // pendente só dispara (com delay "elapsed") quando o app volta.
+    // jest.runOnlyPendingTimers() força esse único timer pendente a
+    // disparar sem recursão automática — por isso o teste inspeciona o
+    // `delay` de cada novo setTimeout agendado tick a tick, em vez de
+    // tentar deixar uma rajada rodar sozinha (o motor nunca para de
+    // reagendar, então jest.runAllTimers()/advanceTimersByTime(20min)
+    // não reproduzem o bug real: ou nunca convergem, ou avançam o
+    // relógio em sincronia com os ticks e mascaram o atraso).
+    const engine = new MetronomeEngine();
+    engine.setBpm(120); // 500ms/tick
+    engine.start(jest.fn());
+    flushImmediateTick();
+
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+    setTimeoutSpy.mockClear();
+
+    jest.setSystemTime(Date.now() + 20 * 60 * 1000);
+    for (let i = 0; i < 4; i++) jest.runOnlyPendingTimers();
+
+    const delays = setTimeoutSpy.mock.calls.map(c => c[1]);
+    // Sem a re-ancoragem: [0, 0, 0, 0] — cada tique reagenda outro
+    // imediato tentando "alcançar" o tempo real, a rajada de metralhadora.
+    // Com a re-ancoragem: só o 1º tique (o já pendente) sai a 0ms; os
+    // seguintes voltam ao intervalo normal do BPM (~500ms).
+    expect(delays[0]).toBe(0);
+    expect(delays.slice(1).every(d => Number(d) > 400)).toBe(true);
+
+    setTimeoutSpy.mockRestore();
     engine.stop();
   });
 
