@@ -65,24 +65,28 @@ src/
 │   └── useLeftHanded.ts      # Preferência de canhoto, persistida via AsyncStorage
 ├── components/
 │   ├── TunerIndicator.tsx    # Medidor visual do afinador
-│   └── ShapeFretboard.tsx    # Braço do violão em SVG — compartilhado por Escalas e Acordes
+│   ├── ShapeFretboard.tsx    # Braço do violão em SVG — compartilhado por Escalas e Acordes
+│   ├── FifthsWheel.tsx       # Círculo das quintas giratório (SVG + PanResponder)
+│   └── TabIcon.tsx           # Ícones SVG da barra inferior (mesmo traço; laranja = aba ativa, cinza = demais)
 ├── screens/
 │   ├── TunerScreen.tsx       # Afinador (funcional)
 │   ├── MetronomeScreen.tsx   # Metrônomo (funcional)
 │   ├── ChordsScreen.tsx      # Acordes — busca + shapes CAGED (funcional)
 │   ├── ScalesScreen.tsx      # Escalas — círculo de tom + 5 shapes por escala (funcional)
+│   ├── HarmonicFieldScreen.tsx # Campo Harmônico — círculo das quintas + 7 acordes (funcional)
 │   └── AboutScreen.tsx       # Modal "Sobre"
 ├── data/
 │   ├── scaleShapesC.ts       # 16 escalas × 5 shapes, hardcoded em Dó, transpostos em runtime
 │   ├── scaleDescriptions.ts  # Texto explicativo por escala
 │   ├── chordShapesC.ts       # 5 shapes CAGED verificados (maior/menor/7/maj7/m7), em Dó
-│   └── chordSuffixes.ts      # Símbolo, frase por extenso e descrição por sufixo de acorde
+│   ├── chordSuffixes.ts      # Símbolo, frase por extenso e descrição por sufixo de acorde
+│   └── harmonicField.ts      # Modelo puro do círculo das quintas: janela, campo, grafia, armadura
 ├── constants/
 │   ├── colors.ts             # Design tokens de cor
 │   └── tunings.ts            # Afinações, NOTE_FREQUENCIES, TUNER_CONFIG
 └── types/
     └── index.ts              # Interfaces TypeScript compartilhadas
-App.tsx                       # Tab bar + roteamento por estado + estado de Acordes/Escalas
+App.tsx                       # Tab bar + roteamento por estado + estado de Acordes/Escalas/Campo
 ```
 
 ## Pipeline de Áudio
@@ -125,6 +129,9 @@ e inspeciona o `delay` de cada novo `setTimeout` agendado.
   hardcoded, em toda tônica, comparado às classes de altura esperadas
   (via `@tonaljs/tonal` para escalas; intervalos musicais para acordes) —
   também garante que nenhuma transposição produz traste negativo.
+- `data/harmonicField.test.ts` — campo maior e menor natural de todos os
+  12 setores comparado às tríades do `@tonaljs/tonal`, grafia da
+  janela seguindo o tom e armadura de clave.
 - `hooks/useLeftHanded.test.tsx` — persistência via AsyncStorage.
 - `jest.setup.js` mocka `react-native-sound`, `react-native-audio-record`
   e `react-native-keep-awake` (módulos nativos que não existem no Jest);
@@ -146,6 +153,7 @@ para testar `/2`, `/3` e `/4`.
 | Metrônomo   | Funcional            | Círculos de beat, tap tempo, drift correction, compassos 1/4-4/4 e 6/8 (ver seção abaixo) |
 | Acordes     | Funcional            | Busca por prefixo + 5 shapes CAGED + modo canhoto (ver seção abaixo) |
 | Escalas     | Funcional            | Círculo de tom + 16 escalas × 5 shapes + modo canhoto       |
+| Campo       | Funcional            | Círculo das quintas giratório, maior/menor natural (ver seção abaixo) |
 | Sobre       | Funcional            | Botão "?" flutuante, modal em `AboutScreen.tsx`             |
 
 ## Telas Acordes e Escalas
@@ -200,6 +208,60 @@ A busca ("Buscar acorde") filtra por prefixo (`startsWith`, não
 achatada de todo tom × qualidade. Trocar só o tom pelo círculo preserva a
 qualidade atual (Dm → B vira Bm), com fallback pra `major` se a qualidade
 não existir nesse tom.
+
+## Tela Campo Harmônico
+
+Círculo das quintas com 3 aros (externo = maiores, meio = relativas
+menores, interno = diminuto viiº de cada setor) e uma **janela fixa** no
+topo, como no produto físico: 3 setores nos aros externo e do meio + 1 no
+interno = os 7 acordes do campo. O **disco gira** (arrastar → encaixa no
+setor mais próximo; toque num setor gira até ele — aro externo seleciona
+modo maior, aro do meio, menor). Rótulos são contra-rotacionados pra ficar
+sempre de pé e centralizados no meio de cada aro. Os graus (I, ii… /
+i, iiº…) aparecem só na lista de acordes abaixo do círculo — dentro da
+janela eles poluíam e duplicavam a informação. A lista fica em 3 linhas
+(3 - 2 - 2: graus 1–3, 4–5 e 6–7). O tipo de campo é escolhido num botão na mesma posição
+e padrão do "Iniciar" do Afinador (abre modal: Maior, Maior com Sétima,
+Menor Natural, Menor Natural com Sétima). Sem texto explicativo. O tamanho
+do círculo (`height * 0.35`) foi calibrado pra esse botão não ser empurrado
+pra baixo do lugar do "Iniciar" — ao adicionar algo na tela, conferir. Ângulo é acumulado (não reduzido a 0–360) pra não "voltar a
+volta inteira" ao passar de Fá para Dó.
+
+**Setor 6 é sempre Sol♭** (decisão do Rangel): nunca Fá♯ maior, porque o
+7º grau seria Mi♯ e a relativa Ré♯m — com Sol♭ ficam Fº e Mi♭m. Sem opção de
+alternar grafia. Dentro da janela de outro tom a grafia segue o tom (em Si
+maior, a 5ª aparece como Fá♯). A armadura mostra só a quantidade ("4
+sustenidos", "1 bemol", "Sem acidentes") — as notas já estão no círculo.
+
+Menor = menor natural: mesma janela da relativa maior, só muda o centro e
+os graus. Menor harmônica/melódica ficam de fora (quebram o modelo da
+janela).
+
+**Com sétima**: a lista e a **janela** do círculo mostram as tétrades
+(notação da aba Acordes: `maj7`, `m7`, `7`, `m7(♭5)`); fora da janela o
+círculo continua em tríades — a sétima depende da posição do acorde *no
+tom* (o V é o único `7`), então rótulos com sétima fora da janela não
+teriam significado. `m7(♭5)` quebra em 2 linhas no aro interno. A fonte
+dos rótulos é reduzida pelo comprimento do nome (`fontSizeFor`) porque
+`adjustsFontSizeToFit` não funciona dentro do `Animated.View`
+contra-rotacionado. A tétrade de cada célula é fixa (`OUTER_SEVENTHS` +
+`m7` + `m7b5`), testada contra `Key.majorKey().chords` /
+`Key.minorKey().natural.chords` do tonaljs.
+
+**Funções harmônicas**: cada acorde tem `func` (T/SD/D) e `primary`.
+Maior: T = I*, iii, vi; SD = IV*, ii; D = V*, viiº. Menor natural: T = i*,
+III; SD = iv*, iiº, VI; D = v*, VII (* = principal). Chips da lista têm
+texto sempre branco e só 2 cores (`chipColor`): tônica (I/i) = laranja,
+todos os demais = azul-escuro — sem diferenciar função por cor (já
+tentado com tons suaves por função e rejeitado: colorido demais). Sem legenda — abaixo
+de cada chip vai o papel do grau (`DEGREE_ROLE`: Tônica, Subdominante,
+Dominante, Subdominante fraca, Dominante fraca, Variante tônica, Relativa
+menor/maior), em 1 linha só (`adjustsFontSizeToFit`). O tom
+selecionado no círculo também é laranja — e esse destaque é uma camada
+**fixa** no centro da janela (não gira com o disco): as camadas são
+setores (giram) → destaque laranja (fixo) → rótulos (giram) → máscara da
+janela (fixa). Durante o arraste (`dragging`) nenhum rótulo fica branco,
+já que o acorde sob o laranja muda continuamente.
 
 ## Tela Metrônomo
 

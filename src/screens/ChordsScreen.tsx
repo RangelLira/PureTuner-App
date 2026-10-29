@@ -75,6 +75,17 @@ const ALL_CHORDS: SearchResult[] = NOTES.flatMap(note => {
   }));
 });
 
+// Estado da tela de Acordes já apontando para um acorde específico — usado
+// pela Tela Campo Harmônico ao tocar num acorde do campo. `pc` é a classe de
+// altura (0 = Dó), já que a grafia do campo (ex.: Mi♯, Sol♭) não existe na
+// lista de tons desta tela.
+export function chordsStateFor(pc: number, suffix: string): ChordsState {
+  const tonic = NOTES[((pc % 12) + 12) % 12];
+  const entries = ((guitarData as any).chords[CHORD_DB_KEY[tonic]] ?? []) as ChordEntry[];
+  const idx = entries.findIndex(e => e.suffix === suffix);
+  return { tonic, suffixIdx: idx >= 0 ? idx : 0, posIdx: 0 };
+}
+
 function normalizeQuery(text: string) {
   return text.toLowerCase().replace(/[\s()]+/g, '');
 }

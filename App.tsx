@@ -6,27 +6,34 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { TabIcon } from './src/components/TabIcon';
 import { colors } from './src/constants/colors';
 import { AboutModal } from './src/screens/AboutScreen';
-import { ChordsScreen, ChordsState, DEFAULT_CHORDS_STATE } from './src/screens/ChordsScreen';
+import { ChordsScreen, ChordsState, DEFAULT_CHORDS_STATE, chordsStateFor } from './src/screens/ChordsScreen';
+import {
+  DEFAULT_HARMONIC_FIELD_STATE,
+  HarmonicFieldScreen,
+  HarmonicFieldState,
+  chordPitchClass,
+} from './src/screens/HarmonicFieldScreen';
 import { useLeftHanded } from './src/hooks/useLeftHanded';
 import { MetronomeScreen } from './src/screens/MetronomeScreen';
 import { DEFAULT_SCALES_STATE, ScalesScreen, ScalesState } from './src/screens/ScalesScreen';
 import { TunerScreen } from './src/screens/TunerScreen';
 
-type TabName = 'tuner' | 'metronome' | 'chords' | 'scales';
+type TabName = 'tuner' | 'metronome' | 'chords' | 'scales' | 'harmonicField';
 
 interface Tab {
   name: TabName;
   label: string;
-  icon: string;
 }
 
 const TABS: Tab[] = [
-  { name: 'tuner', label: 'Afinador', icon: '🎸' },
-  { name: 'metronome', label: 'Metrônomo', icon: '🥁' },
-  { name: 'chords', label: 'Acordes', icon: '🎵' },
-  { name: 'scales', label: 'Escalas', icon: '🎼' },
+  { name: 'tuner', label: 'Afinador' },
+  { name: 'metronome', label: 'Metrônomo' },
+  { name: 'chords', label: 'Acordes' },
+  { name: 'scales', label: 'Escalas' },
+  { name: 'harmonicField', label: 'Campo' },
 ];
 
 export default function App() {
@@ -41,6 +48,8 @@ export default function App() {
   // ou reinstalado.
   const [chordsState, setChordsState] = useState<ChordsState>(DEFAULT_CHORDS_STATE);
   const [scalesState, setScalesState] = useState<ScalesState>(DEFAULT_SCALES_STATE);
+  const [harmonicFieldState, setHarmonicFieldState] =
+    useState<HarmonicFieldState>(DEFAULT_HARMONIC_FIELD_STATE);
 
   // Preferência de canhoto: compartilhada por Acordes e Escalas (ambas usam
   // ShapeFretboard) e persistida em disco, ao contrário do estado acima.
@@ -50,6 +59,8 @@ export default function App() {
     setChordsState(prev => ({ ...prev, ...patch }));
   const updateScalesState = (patch: Partial<ScalesState>) =>
     setScalesState(prev => ({ ...prev, ...patch }));
+  const updateHarmonicFieldState = (patch: Partial<HarmonicFieldState>) =>
+    setHarmonicFieldState(prev => ({ ...prev, ...patch }));
 
   function renderScreen(tab: TabName) {
     switch (tab) {
@@ -73,6 +84,17 @@ export default function App() {
             onStateChange={updateScalesState}
             leftHanded={leftHanded}
             onToggleLeftHanded={toggleLeftHanded}
+          />
+        );
+      case 'harmonicField':
+        return (
+          <HarmonicFieldScreen
+            state={harmonicFieldState}
+            onStateChange={updateHarmonicFieldState}
+            onOpenChord={(chord, sevenths) => {
+              setChordsState(chordsStateFor(chordPitchClass(chord), sevenths ? chord.seventh : chord.quality));
+              setActiveTab('chords');
+            }}
           />
         );
     }
@@ -107,7 +129,12 @@ export default function App() {
                 activeOpacity={0.7}
               >
                 {isActive && <View style={styles.activeIndicator} />}
-                <Text style={styles.tabIcon}>{tab.icon}</Text>
+                <View style={styles.tabIcon}>
+                  <TabIcon
+                    name={tab.name}
+                    color={isActive ? colors.primary.orange : colors.neutral.mediumGray}
+                  />
+                </View>
                 <Text
                   style={[
                     styles.tabLabel,
@@ -189,7 +216,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.orange,
   },
   tabIcon: {
-    fontSize: 26,
+    // mesma altura que o emoji (fontSize 26) ocupava, pra barra não mudar
+    height: 34,
+    justifyContent: 'center',
     marginBottom: 5,
   },
   tabLabel: {
