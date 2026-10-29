@@ -93,8 +93,8 @@ android {
         applicationId "com.contestsoftware.puretuner"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0"
+        versionCode 3
+        versionName "1.1"
         // App é só para Android real (projeto de portfólio) — x86/x86_64 só
         // existem em emulador, nunca em celular. Cortar reduz o APK universal
         // de ~45MB para uma fração disso, já que os .so das duas ABIs de

@@ -351,12 +351,24 @@ toque sem re-render).
   dependência de persistência em disco do projeto, usada só pela preferência
   de canhoto (`useLeftHanded.ts`)
 
-## Requisitos Pendentes (PRODUCT.md)
-Todos os itens da lista original de `PRODUCT.md` ("Problemas para corrigir")
-foram implementados: spring physics na agulha, keep-screen-on, botão
-"Sobre", e os quatro ajustes visuais (título do Afinador, altura da barra
-inferior, posição dos botões da barra, títulos das telas). Nenhum item
-pendente no momento.
+## Versões e Pendências
+Versão atual: **1.1 (versionCode 3)**. Histórico por versão em
+`documentation/Changelog.md` — ao mudar `versionCode`/`versionName`,
+registrar lá na mesma tarefa.
+
+Itens originais de `PRODUCT.md` ("Problemas para corrigir"): todos
+implementados.
+
+Pendências registradas em 29/10/2026 (próxima sessão):
+1. **Metrônomo**: o número do BPM não está bem centralizado no círculo.
+2. **Revisão geral das telas**: deixar mais enxuto e menos poluído — o
+   app precisa ser fácil de entender e usar.
+3. **Orientação horizontal**: hoje a tela quebra ao girar o celular.
+   Objetivo é um layout próprio em paisagem (elementos reagrupados, não só
+   esticados) — muitos músicos estudam com o celular deitado. Ponto
+   técnico de destaque para o portfólio.
+4. **Screenshots da Play Store**: tirar novas, já com a aba Campo (as
+   atuais são de 22/09 e têm `]` sobrando no nome).
 
 ## Convenções do Projeto
 - Nenhum Redux / Context API — React hooks locais são suficientes
