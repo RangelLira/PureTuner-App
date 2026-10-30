@@ -171,3 +171,93 @@ export function chordDescription(suffix: string): string {
   }
   return CHORD_DESCRIPTIONS[suffix] ?? '';
 }
+
+// Grafias alternativas de cada sufixo aceitas pela busca de acordes, além do
+// símbolo exibido (CHORD_SUFFIX_SYMBOLS), escritas como aparecem numa cifra —
+// a busca devolve o acorde com a mesma grafia que a pessoa digitou, já que um
+// leigo não sabe que "C7+" e "Cmaj7" são o mesmo acorde. Cobre a cifra
+// popular brasileira (7M, 7+, º, ø, 5-…) e a americana. "7+" é tratado como
+// sétima maior, como na cifra brasileira — não como 7(#5).
+// Ficam de fora grafias que colidiriam com outro acorde do dicionário
+// (ex.: "C(9)" viraria "c9", que já é o C9 dominante).
+export const CHORD_SUFFIX_ALIASES: Record<string, string[]> = {
+  dim: ['º'],
+  dim7: ['º7'],
+  sus2: ['2'],
+  sus4: ['4', 'sus'],
+  '7sus4': ['7(4)', '7sus'],
+  aug: ['+', '5+', '(#5)'],
+  '69': ['69'],
+  '7b5': ['7(5-)', '7-5'],
+  aug7: ['7(#5)', '7(5+)', '7+5'],
+  aug9: ['9(#5)', '9(5+)'],
+  '9b5': ['9(5-)'],
+  '7b9': ['7(9-)', '7-9'],
+  '7#9': ['7(9+)'],
+  '9#11': ['9(11+)'],
+  maj7: ['7M', '7+'],
+  maj7b5: ['7M(b5)', '7M(5-)', '7+(b5)'],
+  'maj7#5': ['7M(#5)', '7M(5+)'],
+  maj9: ['7M(9)', '7+(9)'],
+  maj11: ['7M(11)'],
+  maj13: ['7M(13)'],
+  m7: ['m7m'],
+  m7b5: ['ø', 'ø7', 'm7(5-)', 'm7-5'],
+  m69: ['m69'],
+  mmaj7: ['m7M', 'm7+'],
+  mmaj7b5: ['m7M(b5)', 'm7M(5-)'],
+  mmaj9: ['m7M(9)', 'm7+(9)'],
+};
+
+// Grafia com bemol de cada tom que o dicionário guarda com sustenido.
+const FLAT_SPELLING: Record<string, string> = {
+  'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb',
+};
+
+// Ignora maiúsculas/minúsculas, exceto o "M": na cifra, "7M" é sétima maior
+// e "m" é menor ("Cm7M" ≠ "Cm7m"). "maj" é aceito em qualquer caixa.
+export function normalizeChordQuery(text: string): string {
+  return text
+    .replace(/[\s()]+/g, '')
+    .replace(/♯/g, '#')
+    .replace(/♭/g, 'b')
+    .replace(/[º˚]/g, '°')
+    .replace(/maj/gi, 'maj')
+    .replace(/[^M]/g, c => c.toLowerCase());
+}
+
+export interface ChordSearchKey {
+  key: string;   // forma normalizada, comparada com a consulta
+  label: string; // forma exibida, como numa cifra (ex.: "Db7M")
+}
+
+// Todas as grafias pelas quais um acorde pode ser buscado: cada grafia da
+// tônica (sustenido e bemol) × cada grafia do sufixo. A primeira é sempre o
+// símbolo padrão do app.
+export function chordSearchKeys(tonic: string, suffix: string): ChordSearchKey[] {
+  const tonics = [tonic, FLAT_SPELLING[tonic]].filter(Boolean) as string[];
+  const suffixes = [chordSuffixSymbol(suffix), ...(CHORD_SUFFIX_ALIASES[suffix] ?? [])];
+  const seen = new Set<string>();
+  const result: ChordSearchKey[] = [];
+  for (const t of tonics) {
+    for (const s of suffixes) {
+      const key = normalizeChordQuery(t + s);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push({ key, label: t + s });
+    }
+  }
+  return result;
+}
+
+// Grafias de um acorde que casam com a consulta (já normalizada) — cada
+// uma vira uma linha própria na busca, pra quem copiou "C7+" de uma cifra
+// achar "C7+" na lista, não só "C7M". Vazio = não casa.
+export function matchChordSearch(
+  keys: ChordSearchKey[],
+  query: string,
+): { label: string; exact: boolean }[] {
+  return keys
+    .filter(k => k.key.startsWith(query))
+    .map(k => ({ label: k.label, exact: k.key === query }));
+}

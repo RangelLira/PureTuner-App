@@ -12,7 +12,14 @@ import guitarData from '@tombatossals/chords-db/lib/guitar.json';
 import { FretboardBarre, ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
 import { CHORD_SHAPES_C, FretboardData, transposeChordShape } from '../data/chordShapesC';
-import { chordDescription, chordSuffixSymbol } from '../data/chordSuffixes';
+import {
+  chordDescription,
+  ChordSearchKey,
+  chordSearchKeys,
+  chordSuffixSymbol,
+  matchChordSearch,
+  normalizeChordQuery,
+} from '../data/chordSuffixes';
 import type { ShapeData } from '../data/scaleShapesC';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
@@ -23,6 +30,10 @@ export interface ChordsState {
   tonic: ChordsNoteKey;
   suffixIdx: number;
   posIdx: number;
+  // Grafia com que o acorde foi buscado (ex.: "C7+"), mostrada no círculo no
+  // lugar do símbolo padrão ("Cmaj7") — quem copiou o nome de uma cifra
+  // precisa ver o mesmo nome. Some ao trocar de tom ou de acorde.
+  typedName?: string;
 }
 
 export const DEFAULT_CHORDS_STATE: ChordsState = { tonic: 'C', suffixIdx: 0, posIdx: 0 };
@@ -61,6 +72,12 @@ interface SearchResult {
   tonic: NoteKey;
   suffix: string;
   symbol: string;
+  searchKeys: ChordSearchKey[];
+}
+
+interface SearchMatch extends SearchResult {
+  label: string;
+  exact: boolean;
 }
 
 // Lista achatada de todo tom × qualidade do dicionário, usada pela busca.
@@ -72,6 +89,7 @@ const ALL_CHORDS: SearchResult[] = NOTES.flatMap(note => {
     tonic: note,
     suffix: entry.suffix,
     symbol: `${note}${chordSuffixSymbol(entry.suffix)}`,
+    searchKeys: chordSearchKeys(note, entry.suffix),
   }));
 });
 
@@ -84,10 +102,6 @@ export function chordsStateFor(pc: number, suffix: string): ChordsState {
   const entries = ((guitarData as any).chords[CHORD_DB_KEY[tonic]] ?? []) as ChordEntry[];
   const idx = entries.findIndex(e => e.suffix === suffix);
   return { tonic, suffixIdx: idx >= 0 ? idx : 0, posIdx: 0 };
-}
-
-function normalizeQuery(text: string) {
-  return text.toLowerCase().replace(/[\s()]+/g, '');
 }
 
 // Converte uma posição do dicionário (frets relativos ao baseFret, -1 = mudo)
@@ -141,7 +155,7 @@ function shapeMinFret(shape: ShapeData) {
 }
 
 export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHanded }: ChordsScreenProps) {
-  const { tonic, suffixIdx, posIdx } = state;
+  const { tonic, suffixIdx, posIdx, typedName } = state;
   const [tonicModalVisible, setTonicModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,7 +187,7 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
 
   const totalPositions = usesCaged ? orderedCagedShapes.length : dbPositions.length;
 
-  const chordName = selectedEntry ? `${tonic}${chordSuffixSymbol(selectedEntry.suffix)}` : tonic;
+  const chordName = typedName ?? (selectedEntry ? `${tonic}${chordSuffixSymbol(selectedEntry.suffix)}` : tonic);
   const description = selectedEntry ? chordDescription(selectedEntry.suffix) : '';
 
   // Notas que compõem o acorde: união das classes de altura de todas as
@@ -194,9 +208,17 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
   }, [usesCaged, orderedCagedShapes, posIdx, currentDbPosition]);
 
   const searchResults = useMemo(() => {
-    const query = normalizeQuery(searchQuery);
+    const query = normalizeChordQuery(searchQuery);
     if (!query) return [];
-    return ALL_CHORDS.filter(c => normalizeQuery(c.symbol).startsWith(query)).slice(0, 60);
+    const matches: SearchMatch[] = [];
+    for (const c of ALL_CHORDS) {
+      for (const m of matchChordSearch(c.searchKeys, query)) matches.push({ ...c, ...m });
+    }
+    // Grafia exata primeiro, depois as mais curtas — as mais próximas do que
+    // foi digitado (em "C7": C7, C7M, C7+… antes de C7(#9), C7sus4). O sort é
+    // estável, então empates mantêm a ordem do dicionário.
+    matches.sort((a, b) => Number(b.exact) - Number(a.exact) || a.label.length - b.label.length);
+    return matches.slice(0, 150);
   }, [searchQuery]);
 
   const handleTonicSelect = (note: NoteKey) => {
@@ -209,7 +231,7 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
       const idx = entries.findIndex(e => e.suffix === selectedEntry.suffix);
       if (idx >= 0) newSuffixIdx = idx;
     }
-    onStateChange({ tonic: note, suffixIdx: newSuffixIdx, posIdx: 0 });
+    onStateChange({ tonic: note, suffixIdx: newSuffixIdx, posIdx: 0, typedName: undefined });
     setTonicModalVisible(false);
   };
 
@@ -218,11 +240,16 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
     setSearchModalVisible(true);
   };
 
-  const handleSearchSelect = (result: SearchResult) => {
+  const handleSearchSelect = (result: SearchMatch) => {
     const dbKey = CHORD_DB_KEY[result.tonic];
     const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
     const idx = entries.findIndex(e => e.suffix === result.suffix);
-    onStateChange({ tonic: result.tonic, suffixIdx: idx >= 0 ? idx : 0, posIdx: 0 });
+    onStateChange({
+      tonic: result.tonic,
+      suffixIdx: idx >= 0 ? idx : 0,
+      posIdx: 0,
+      typedName: result.label !== result.symbol ? result.label : undefined,
+    });
     setSearchModalVisible(false);
     setSearchQuery('');
   };
@@ -386,12 +413,15 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
               ) : (
                 searchResults.map((result, i) => (
                   <TouchableOpacity
-                    key={`${result.tonic}-${result.suffix}-${i}`}
+                    key={`${result.label}-${i}`}
                     style={styles.scaleListItem}
                     onPress={() => handleSearchSelect(result)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.scaleListText}>{result.symbol}</Text>
+                    <Text style={styles.scaleListText}>{result.label}</Text>
+                    {result.label !== result.symbol && (
+                      <Text style={styles.searchAliasText}>mesmo acorde que {result.symbol}</Text>
+                    )}
                   </TouchableOpacity>
                 ))
               )}
@@ -653,6 +683,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.secondary.darkBlue,
     fontWeight: '500',
+  },
+  searchAliasText: {
+    fontSize: 13,
+    color: colors.neutral.mediumGray,
+    marginTop: 2,
   },
   scaleListTextActive: {
     color: colors.neutral.white,

@@ -132,6 +132,8 @@ e inspeciona o `delay` de cada novo `setTimeout` agendado.
 - `data/harmonicField.test.ts` — campo maior e menor natural de todos os
   12 setores comparado às tríades do `@tonaljs/tonal`, grafia da
   janela seguindo o tom e armadura de clave.
+- `data/chordSuffixes.test.ts` — grafias alternativas da busca de
+  acordes (7M, 7+, º, ø, bemóis…) e ausência de colisão entre elas.
 - `hooks/useLeftHanded.test.tsx` — persistência via AsyncStorage.
 - `jest.setup.js` mocka `react-native-sound`, `react-native-audio-record`
   e `react-native-keep-awake` (módulos nativos que não existem no Jest);
@@ -205,7 +207,21 @@ depender de anotação manual sujeita a erro. Qualidades sem shapes CAGED
 cadastrados caem no fallback com as posições cruas do dicionário.
 A busca ("Buscar acorde") filtra por prefixo (`startsWith`, não
 `includes` — evitar falso positivo tipo "Caug" ao digitar "G") numa lista
-achatada de todo tom × qualidade. Trocar só o tom pelo círculo preserva a
+achatada de todo tom × qualidade. Cada acorde é buscável por várias
+grafias (`chordSearchKeys` em `chordSuffixes.ts`): tônica com sustenido ou
+bemol (Db = C#) e sufixo pelo símbolo exibido ou pelos aliases de
+`CHORD_SUFFIX_ALIASES` (cifra brasileira: 7M, 7+, º, ø, 5-…). O app é
+pensado pro leigo, que copia o nome de uma cifra e não sabe que "C7+" e
+"Cmaj7" são o mesmo acorde — por isso o resultado e o círculo mostram a
+**grafia digitada** (`ChordsState.typedName`, com "mesmo acorde que Cmaj7"
+embaixo na lista; some ao trocar de tom). **Cada grafia que casa é uma
+linha própria** (em "C7" aparecem C7M e C7+ separados, não só uma delas).
+Ordem: grafia exata primeiro, depois as mais curtas (mais próximas do que
+foi digitado). A busca ignora caixa **exceto no "M"**: "Cm7M" = menor com
+sétima maior, "Cm7m" = Cm7 (menor com sétima menor). **"7+" =
+sétima maior** (uso brasileiro), não 7(#5). Alias que colidiria com outro
+acorde do mesmo tom fica de fora (ex.: "C(9)" = C9) — garantido por
+`__tests__/data/chordSuffixes.test.ts`. Trocar só o tom pelo círculo preserva a
 qualidade atual (Dm → B vira Bm), com fallback pra `major` se a qualidade
 não existir nesse tom.
 
@@ -359,8 +375,8 @@ registrar lá na mesma tarefa.
 Itens originais de `PRODUCT.md` ("Problemas para corrigir"): todos
 implementados.
 
-Pendências registradas em 29/10/2026 (próxima sessão):
-1. **Metrônomo**: o número do BPM não está bem centralizado no círculo.
+Pendências registradas em 29/10/2026 (o item do BPM centralizado foi
+resolvido em 30/10):
 2. **Revisão geral das telas**: deixar mais enxuto e menos poluído — o
    app precisa ser fácil de entender e usar.
 3. **Orientação horizontal**: hoje a tela quebra ao girar o celular.

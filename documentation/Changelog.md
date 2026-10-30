@@ -3,6 +3,19 @@
 O que mudou em cada versão publicada (ou preparada para publicação).
 `versionName` / `versionCode` ficam em `android/app/build.gradle`.
 
+## Não publicado (próxima versão)
+
+### Alterado
+- **Metrônomo**: número do BPM centralizado no círculo, na mesma linha dos
+  botões − e +, e fonte maior (52 → 60). O rótulo "BPM" ficou fixo logo
+  abaixo, sem empurrar o número pra cima.
+- **Busca de acordes** aceita as grafias de cifra além do símbolo do app:
+  7M / 7+ (sétima maior), m7M, º, ø, m7(5-), 7(9-), 7(4), tons com bemol
+  (Db = C#) e ♯/♭. Cada grafia que casa é uma linha própria na lista e o
+  acorde é mostrado com a grafia digitada ("C7+"), com "mesmo acorde que
+  Cmaj7" embaixo — o leigo que copiou o nome de uma cifra vê o mesmo nome.
+  Maiúsculas e minúsculas são ignoradas, exceto no "M" (Cm7M ≠ Cm7m).
+
 ## 1.1 (versionCode 3) — 29/10/2026
 
 ### Novo

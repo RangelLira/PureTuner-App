@@ -508,14 +508,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 8,
   },
+  // Só o número participa do layout: assim ele fica no centro exato do
+  // círculo, alinhado com os botões − e +. O rótulo "BPM" é absoluto.
   bpmValue: {
-    fontSize: 52,
+    fontSize: 60,
     fontWeight: '700',
     color: colors.secondary.darkBlue,
-    lineHeight: 56,
+    lineHeight: 64,
     includeFontPadding: false,
   },
   bpmUnit: {
+    position: 'absolute',
+    bottom: 22,
     fontSize: 13,
     fontWeight: '600',
     color: colors.neutral.mediumGray,
