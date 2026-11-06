@@ -516,10 +516,11 @@ const styles = StyleSheet.create({
     color: colors.secondary.darkBlue,
     lineHeight: 64,
     includeFontPadding: false,
+    transform: [{ translateY: -4 }],
   },
   bpmUnit: {
     position: 'absolute',
-    bottom: 22,
+    bottom: 32,
     fontSize: 13,
     fontWeight: '600',
     color: colors.neutral.mediumGray,

@@ -300,6 +300,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: colors.secondary.darkBlue,
+    // a fonte reserva mais espaço acima da letra: sem isso fica baixo no círculo
+    transform: [{ translateY: -28 * 0.06 }],
   },
   scaleChip: {
     paddingHorizontal: 28,

@@ -22,6 +22,9 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   VI = Subdominante relativa, VII = Dominante relativa.
 - **Campo Harmônico**: disco um pouco maior, aros externo e do meio mais
   finos e aro interno mais largo — os diminutos não ficam mais apertados.
+- **Círculos de Acordes, Escalas e Metrônomo**: texto centralizado de
+  verdade (ficava baixo); nome do acorde maior, e os nomes longos
+  ("C#m7(b5)") só encolhem o necessário; "BPM" mais perto do número.
 
 ## 1.1 (versionCode 3) — 29/10/2026
 

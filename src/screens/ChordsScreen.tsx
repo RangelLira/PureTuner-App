@@ -142,11 +142,20 @@ function positionToFretboardData(position: ChordPosition): FretboardData {
   return { shape, muted, barres };
 }
 
+// A fonte reserva mais espaço acima da letra do que abaixo, então o texto
+// centralizado pelo flexbox fica visualmente baixo no círculo — sobe ~6% do
+// tamanho da fonte (medido no aparelho).
+function circleTextStyle(text: string) {
+  const fontSize = circleFontSize(text);
+  return { fontSize, transform: [{ translateY: -fontSize * 0.06 }] };
+}
+
+// Nomes longos ("C#m7(b5)", "Cm(maj7)(b5)") encolhem só o necessário pra
+// caber nos ~94dp úteis do círculo (~0,6 da fonte por caractere, em negrito).
 function circleFontSize(text: string) {
-  if (text.length <= 2) return 28;
-  if (text.length <= 4) return 22;
-  if (text.length <= 7) return 17;
-  return 13;
+  const cap = text.length <= 2 ? 32 : text.length <= 4 ? 26 : 20;
+  const fit = Math.floor(94 / (text.length * 0.6));
+  return Math.min(cap, Math.max(12, fit));
 }
 
 function shapeMinFret(shape: ShapeData) {
@@ -264,7 +273,7 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
         onPress={() => setTonicModalVisible(true)}
         activeOpacity={0.8}
       >
-        <Text style={[styles.tonicButtonText, { fontSize: circleFontSize(chordName) }]}>
+        <Text style={[styles.tonicButtonText, circleTextStyle(chordName)]}>
           {chordName}
         </Text>
       </TouchableOpacity>
