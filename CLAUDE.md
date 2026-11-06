@@ -239,7 +239,7 @@ janela eles poluíam e duplicavam a informação. A lista fica em 3 linhas
 (3 - 2 - 2: graus 1–3, 4–5 e 6–7). O tipo de campo é escolhido num botão na mesma posição
 e padrão do "Iniciar" do Afinador (abre modal: Maior, Maior com Sétima,
 Menor Natural, Menor Natural com Sétima). Sem texto explicativo. O tamanho
-do círculo (`height * 0.35`) foi calibrado pra esse botão não ser empurrado
+do círculo (`height * 0.36`; aros 0.80–1 / 0.60–0.80 / 0.29–0.60 do raio, o interno mais largo pros diminutos) foi calibrado pra esse botão não ser empurrado
 pra baixo do lugar do "Iniciar" — ao adicionar algo na tela, conferir. Ângulo é acumulado (não reduzido a 0–360) pra não "voltar a
 volta inteira" ao passar de Fá para Dó.
 
@@ -270,9 +270,18 @@ III; SD = iv*, iiº, VI; D = v*, VII (* = principal). Chips da lista têm
 texto sempre branco e só 2 cores (`chipColor`): tônica (I/i) = laranja,
 todos os demais = azul-escuro — sem diferenciar função por cor (já
 tentado com tons suaves por função e rejeitado: colorido demais). Sem legenda — abaixo
-de cada chip vai o papel do grau (`DEGREE_ROLE`: Tônica, Subdominante,
-Dominante, Subdominante fraca, Dominante fraca, Variante tônica, Relativa
-menor/maior), em 1 linha só (`adjustsFontSizeToFit`). O tom
+de cada chip vai o papel do grau (`DEGREE_ROLE`), em 1 linha só
+(`adjustsFontSizeToFit`). Só nomes de **função** (não de grau, tipo
+Mediante/Subtônica — misturar os dois sistemas foi rejeitado). Os
+secundários são as **relativas** dos principais, que na janela ficam lado
+a lado no outro anel (F/Dm, C/Am, G/Em). Maior: Tônica, Subdominante
+relativa (ii), Dominante relativa (iii), Subdominante, Dominante,
+Relativa menor (vi), Dominante fraca (viiº). Menor: Tônica, Subdominante
+fraca (iiº), Relativa maior (III), Subdominante, **Dominante menor** (v —
+sem sensível, nunca só "Dominante"), Subdominante relativa (VI),
+Dominante relativa (VII). Revisado em 06/11/2026;
+campo menor "híbrido" (V maior) avaliado e rejeitado: o acorde maior não
+cabe no anel dos menores e disco e lista têm que mostrar o mesmo. O tom
 selecionado no círculo também é laranja — e esse destaque é uma camada
 **fixa** no centro da janela (não gira com o disco): as camadas são
 setores (giram) → destaque laranja (fixo) → rótulos (giram) → máscara da

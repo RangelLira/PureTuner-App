@@ -56,8 +56,8 @@ const FIELD_ROWS: Array<[number, number]> = [[0, 3], [3, 5], [5, 7]];
 const DEGREE_ROLE: Record<string, string> = {
   // maior
   I: 'Tônica',
-  ii: 'Subdominante fraca',
-  iii: 'Variante tônica',
+  ii: 'Subdominante relativa',
+  iii: 'Dominante relativa',
   IV: 'Subdominante',
   V: 'Dominante',
   vi: 'Relativa menor',
@@ -67,9 +67,9 @@ const DEGREE_ROLE: Record<string, string> = {
   'iiº': 'Subdominante fraca',
   III: 'Relativa maior',
   iv: 'Subdominante',
-  v: 'Dominante',
-  VI: 'Subdominante fraca',
-  VII: 'Dominante fraca',
+  v: 'Dominante menor', // sem sensível (Em em Lá menor, não E7)
+  VI: 'Subdominante relativa',
+  VII: 'Dominante relativa',
 };
 
 // Só a quantidade — as notas já aparecem no círculo e nos acordes.
@@ -84,7 +84,7 @@ export function HarmonicFieldScreen({ state, onStateChange, onOpenChord }: Harmo
   const { sector, mode, sevenths } = state;
   const { width, height } = useWindowDimensions();
   const [modeModalVisible, setModeModalVisible] = useState(false);
-  const wheelSize = Math.min(width - 24, height * 0.35, 400);
+  const wheelSize = Math.min(width - 24, height * 0.36, 400);
 
   const field = useMemo(() => harmonicField(sector, mode), [sector, mode]);
   const fieldLabel = FIELD_TYPES.find(f => f.mode === mode && f.sevenths === sevenths)?.label;
@@ -214,10 +214,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.secondary.darkBlue,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   signature: {
-    marginTop: 10,
+    marginTop: 6,
     marginBottom: 6,
     fontSize: 14,
     fontWeight: '700',

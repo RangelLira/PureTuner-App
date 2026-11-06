@@ -15,6 +15,13 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   acorde é mostrado com a grafia digitada ("C7+"), com "mesmo acorde que
   Cmaj7" embaixo — o leigo que copiou o nome de uma cifra vê o mesmo nome.
   Maiúsculas e minúsculas são ignoradas, exceto no "M" (Cm7M ≠ Cm7m).
+- **Campo Harmônico**: nomes dos graus revisados, todos no sistema de
+  funções (secundários = relativas dos principais). Maior: ii =
+  Subdominante relativa, iii = Dominante relativa. Menor: v = Dominante
+  menor (era "Dominante", mas sem sensível não tem a força da dominante),
+  VI = Subdominante relativa, VII = Dominante relativa.
+- **Campo Harmônico**: disco um pouco maior, aros externo e do meio mais
+  finos e aro interno mais largo — os diminutos não ficam mais apertados.
 
 ## 1.1 (versionCode 3) — 29/10/2026
 
