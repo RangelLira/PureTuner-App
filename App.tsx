@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingTop: 10,
-    paddingBottom: 46,
+    paddingBottom: 52,
     position: 'relative',
   },
   activeIndicator: {

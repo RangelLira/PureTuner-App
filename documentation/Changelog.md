@@ -25,6 +25,13 @@ O que mudou em cada versão publicada (ou preparada para publicação).
 - **Círculos de Acordes, Escalas e Metrônomo**: texto centralizado de
   verdade (ficava baixo); nome do acorde maior, e os nomes longos
   ("C#m7(b5)") só encolhem o necessário; "BPM" mais perto do número.
+- **Ajustes visuais**: Afinador sem o contador de cents (só a frase de
+  status, maior); chips de compasso e subdivisão do Metrônomo em azul;
+  mais espaço entre as notas e o texto explicativo em Acordes e Escalas;
+  barra inferior um pouco mais alta; escalas "Blues Maior/Menor" viram
+  "Penta Blues Maior/Menor".
+- **Busca de acordes**: primeira letra sempre maiúscula (o leigo não
+  precisa do shift pro "C").
 
 ## 1.1 (versionCode 3) — 29/10/2026
 

@@ -53,8 +53,8 @@ const SCALES = [
   { name: 'harmonic minor',   label: 'Menor Harmônica'   },
   { name: 'major pentatonic', label: 'Pentatônica Maior' },
   { name: 'minor pentatonic', label: 'Pentatônica Menor' },
-  { name: 'major blues',      label: 'Blues Maior'       },
-  { name: 'minor blues',      label: 'Blues Menor'       },
+  { name: 'major blues',      label: 'Penta Blues Maior' },
+  { name: 'minor blues',      label: 'Penta Blues Menor' },
   { name: 'ionian',           label: 'Jônio'             },
   { name: 'dorian',           label: 'Dórico'            },
   { name: 'phrygian',         label: 'Frígio'            },
@@ -351,7 +351,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     height: 76,
-    marginBottom: 14,
+    // respiro acima vindo do de baixo: o braço continua na mesma posição
+    marginTop: 8,
+    marginBottom: 6,
   },
   fretboardContainer: {
     alignItems: 'center',

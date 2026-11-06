@@ -407,11 +407,13 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
             <TextInput
               style={styles.searchInput}
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              // tônica sempre maiúscula: o leigo não precisa do shift pro "C"
+              // (o resto fica como digitado — o "M" distingue Cm7M de Cm7m)
+              onChangeText={text => setSearchQuery(text.charAt(0).toUpperCase() + text.slice(1))}
               placeholder="Ex.: C, Em7(b5), F#m..."
               placeholderTextColor={colors.neutral.mediumGray}
               autoFocus
-              autoCapitalize="none"
+              autoCapitalize="sentences"
               autoCorrect={false}
             />
             <ScrollView style={styles.scaleList} showsVerticalScrollIndicator={false}>
@@ -526,7 +528,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     height: 76,
-    marginBottom: 14,
+    // respiro acima vindo do de baixo: o braço continua na mesma posição
+    marginTop: 8,
+    marginBottom: 6,
   },
   fretboardContainer: {
     alignItems: 'center',

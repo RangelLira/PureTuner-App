@@ -564,11 +564,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 13,
     borderRadius: 24,
-    backgroundColor: colors.neutral.white,
+    // azul como os chips de Acordes/Escalas (a borda mantém a altura de antes)
+    backgroundColor: colors.secondary.darkBlue,
     borderWidth: 1.5,
-    borderColor: '#D0D0D0',
+    borderColor: colors.secondary.darkBlue,
   },
-  subChipText: { fontSize: 15, fontWeight: '600', color: colors.secondary.darkBlue },
+  subChipText: { fontSize: 15, fontWeight: '600', color: colors.neutral.white },
   spacer: { flex: 1 },
 
   controlsContainer: { alignItems: 'center', paddingBottom: 40 },
