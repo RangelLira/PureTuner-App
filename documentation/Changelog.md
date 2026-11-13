@@ -6,6 +6,15 @@ O que mudou em cada versão publicada (ou preparada para publicação).
 ## Não publicado (próxima versão)
 
 ### Alterado
+- **Ícone do app**: o diapasão em P ficou menor (de 81% para 58% da
+  altura), com as três pontas aparadas e traço um pouco mais grosso, e é
+  centralizado pelo centro óptico: antes era pela caixa delimitadora, e a
+  haste longa à esquerda puxava o peso visual pro lado. Virou adaptive
+  icon (fundo laranja + símbolo vetorial na zona segura), então o launcher
+  aplica a própria máscara (círculo, squircle…) sem cortar. Também ganhou
+  versão monocromática pros ícones temáticos do Android 13+. PNGs legados
+  e `play-store-icon-512.png` regenerados a partir da mesma geometria
+  (`scripts/icon/`).
 - **Metrônomo**: número do BPM centralizado no círculo, na mesma linha dos
   botões − e +, e fonte maior (52 → 60). O rótulo "BPM" ficou fixo logo
   abaixo, sem empurrar o número pra cima.

@@ -42,6 +42,19 @@ continua funcionando normalmente). Sempre conferir com
 `unzip -l app-release.apk | grep raw/` se o **nome** bate, não só se o
 arquivo existe.
 
+## Ícone do App
+Fonte única: `scripts/icon/` (Python + Pillow). A geometria do diapasão
+em P (`gen.py`) gera tudo via `python scripts/icon/build.py`: adaptive
+icon (`mipmap-anydpi-v26/` + `drawable/ic_launcher_foreground.xml` +
+`ic_launcher_monochrome.xml` + `values/ic_launcher_background.xml`), os
+PNGs legados `mipmap-*/ic_launcher{,_round}.png` (fallback pro API
+24–25) e o `play-store-icon-512.png`. **Não editar os PNGs nem o vetor à
+mão**: mude os parâmetros em `build.py` (`C`) e regenere. Pra comparar
+variantes, use `python scripts/icon/gen.py` (gera `comparativo.png`).
+O símbolo ocupa 58% da altura da área visível e é centralizado pelo
+centro óptico, não pela caixa delimitadora (a haste longa fica à
+esquerda).
+
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
