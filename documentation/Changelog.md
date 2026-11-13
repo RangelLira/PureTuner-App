@@ -15,6 +15,9 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   versão monocromática pros ícones temáticos do Android 13+. PNGs legados
   e `play-store-icon-512.png` regenerados a partir da mesma geometria
   (`scripts/icon/`).
+- **Sobre** e **site**: textos reescritos com as cinco ferramentas. O
+  Sobre só descrevia o Afinador e mostrava a versão 1.0.0; o site não
+  tinha o Campo Harmônico, o Montar acorde, o 6/8 nem o tap tempo.
 - **Metrônomo**: número do BPM centralizado no círculo, na mesma linha dos
   botões − e +, e fonte maior (52 → 60). O rótulo "BPM" ficou fixo logo
   abaixo, sem empurrar o número pra cima.
@@ -41,6 +44,16 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   "Penta Blues Maior/Menor".
 - **Busca de acordes**: primeira letra sempre maiúscula (o leigo não
   precisa do shift pro "C").
+
+### Novo
+- **Montar acorde** (aba Acordes): o usuário marca notas no braço
+  (toque, pestana arrastando na vertical, cordas soltas/abafadas, até a
+  casa 15) e o app mostra as notas, o grau de cada uma e o nome do acorde
+  assim que ele forma um acorde de verdade — inclusive inversões ("C/E").
+  Ao concluir, o acorde montado aparece como "Personalizado", seguido dos
+  formatos convencionais do mesmo acorde; trocar o tom o transpõe.
+- **Graus acima das notas** em Acordes e Escalas, em notação brasileira
+  (T, 3m, 3M, 5J, 7m, 7M…).
 
 ## 1.1 (versionCode 3) — 29/10/2026
 
