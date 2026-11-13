@@ -64,11 +64,6 @@ export function TunerIndicator({ note, frequency, cents, isInTune }: TunerIndica
     ? '#F39C12'
     : '#E74C3C';
 
-  const getCentsDisplay = () => {
-    if (cents === 0) return '0';
-    return `${cents > 0 ? '+' : ''}${cents.toFixed(0)}`;
-  };
-
   const getStatusText = () => {
     if (!note) return 'Aguardando sinal...';
     if (isInTune) return 'Afinado!';
@@ -127,11 +122,8 @@ export function TunerIndicator({ note, frequency, cents, isInTune }: TunerIndica
         </View>
       </View>
 
-      {/* Cents e status */}
+      {/* Status — o número de cents foi removido: o medidor já mostra o desvio */}
       <View style={styles.statusContainer}>
-        <Text style={[styles.centsText, { color: noteColor }]}>
-          {note ? `${getCentsDisplay()} cents` : '--'}
-        </Text>
         <Text style={[styles.statusText, { color: noteColor }]}>
           {getStatusText()}
         </Text>
@@ -221,15 +213,9 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     alignItems: 'center',
-    gap: 4,
-  },
-  centsText: {
-    fontSize: 20,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
   },
   statusText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '600',
   },
 });

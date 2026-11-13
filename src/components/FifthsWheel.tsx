@@ -31,9 +31,9 @@ const TAP_SLOP = 8;
 
 // Raios de cada aro, em fração do raio total.
 const RING = {
-  outer: [0.75, 1.0],
-  middle: [0.52, 0.75],
-  inner: [0.29, 0.52],
+  outer: [0.80, 1.0],
+  middle: [0.60, 0.80],
+  inner: [0.29, 0.60],
 } as const;
 
 // Ângulo em graus, sentido horário a partir do topo.
@@ -336,7 +336,7 @@ function fontSizeFor(ring: 'outer' | 'middle' | 'inner', text: string) {
 
 // Largura de cada rótulo ~ largura do setor no seu aro (acima disso o
 // adjustsFontSizeToFit reduz a fonte, ex.: "F♯maj7").
-const LABEL_W = { outer: 84, middle: 64, inner: 46 } as const;
+const LABEL_W = { outer: 88, middle: 66, inner: 54 } as const;
 const LABEL_H = 40;
 
 const styles = StyleSheet.create({

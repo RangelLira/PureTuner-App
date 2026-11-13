@@ -6,6 +6,18 @@ O que mudou em cada versão publicada (ou preparada para publicação).
 ## Não publicado (próxima versão)
 
 ### Alterado
+- **Ícone do app**: o diapasão em P ficou menor (de 81% para 58% da
+  altura), com as três pontas aparadas e traço um pouco mais grosso, e é
+  centralizado pelo centro óptico: antes era pela caixa delimitadora, e a
+  haste longa à esquerda puxava o peso visual pro lado. Virou adaptive
+  icon (fundo laranja + símbolo vetorial na zona segura), então o launcher
+  aplica a própria máscara (círculo, squircle…) sem cortar. Também ganhou
+  versão monocromática pros ícones temáticos do Android 13+. PNGs legados
+  e `play-store-icon-512.png` regenerados a partir da mesma geometria
+  (`scripts/icon/`).
+- **Sobre** e **site**: textos reescritos com as cinco ferramentas. O
+  Sobre só descrevia o Afinador e mostrava a versão 1.0.0; o site não
+  tinha o Campo Harmônico, o Montar acorde, o 6/8 nem o tap tempo.
 - **Metrônomo**: número do BPM centralizado no círculo, na mesma linha dos
   botões − e +, e fonte maior (52 → 60). O rótulo "BPM" ficou fixo logo
   abaixo, sem empurrar o número pra cima.
@@ -15,6 +27,33 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   acorde é mostrado com a grafia digitada ("C7+"), com "mesmo acorde que
   Cmaj7" embaixo — o leigo que copiou o nome de uma cifra vê o mesmo nome.
   Maiúsculas e minúsculas são ignoradas, exceto no "M" (Cm7M ≠ Cm7m).
+- **Campo Harmônico**: nomes dos graus revisados, todos no sistema de
+  funções (secundários = relativas dos principais). Maior: ii =
+  Subdominante relativa, iii = Dominante relativa. Menor: v = Dominante
+  menor (era "Dominante", mas sem sensível não tem a força da dominante),
+  VI = Subdominante relativa, VII = Dominante relativa.
+- **Campo Harmônico**: disco um pouco maior, aros externo e do meio mais
+  finos e aro interno mais largo — os diminutos não ficam mais apertados.
+- **Círculos de Acordes, Escalas e Metrônomo**: texto centralizado de
+  verdade (ficava baixo); nome do acorde maior, e os nomes longos
+  ("C#m7(b5)") só encolhem o necessário; "BPM" mais perto do número.
+- **Ajustes visuais**: Afinador sem o contador de cents (só a frase de
+  status, maior); chips de compasso e subdivisão do Metrônomo em azul;
+  mais espaço entre as notas e o texto explicativo em Acordes e Escalas;
+  barra inferior um pouco mais alta; escalas "Blues Maior/Menor" viram
+  "Penta Blues Maior/Menor".
+- **Busca de acordes**: primeira letra sempre maiúscula (o leigo não
+  precisa do shift pro "C").
+
+### Novo
+- **Montar acorde** (aba Acordes): o usuário marca notas no braço
+  (toque, pestana arrastando na vertical, cordas soltas/abafadas, até a
+  casa 15) e o app mostra as notas, o grau de cada uma e o nome do acorde
+  assim que ele forma um acorde de verdade — inclusive inversões ("C/E").
+  Ao concluir, o acorde montado aparece como "Personalizado", seguido dos
+  formatos convencionais do mesmo acorde; trocar o tom o transpõe.
+- **Graus acima das notas** em Acordes e Escalas, em notação brasileira
+  (T, 3m, 3M, 5J, 7m, 7M…).
 
 ## 1.1 (versionCode 3) — 29/10/2026
 

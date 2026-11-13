@@ -8,9 +8,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Note } from '@tonaljs/tonal';
 import guitarData from '@tombatossals/chords-db/lib/guitar.json';
+import { BuilderFretboard } from '../components/BuilderFretboard';
+import { NoteChips } from '../components/NoteChips';
 import { FretboardBarre, ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
+import { ChordAnalysis, analyzeChord, degreesFor, suffixIntervals } from '../data/chordAnalysis';
+import {
+  ChordBuilderState,
+  EMPTY_BUILDER,
+  builderToFretboard,
+  clearBuilder,
+  fittingWindowStart,
+  soundingPitches,
+  transposeBuilder,
+} from '../data/chordBuilder';
 import { CHORD_SHAPES_C, FretboardData, transposeChordShape } from '../data/chordShapesC';
 import {
   chordDescription,
@@ -34,6 +47,14 @@ export interface ChordsState {
   // lugar do símbolo padrão ("Cmaj7") — quem copiou o nome de uma cifra
   // precisa ver o mesmo nome. Some ao trocar de tom ou de acorde.
   typedName?: string;
+  // "Montar acorde". Ficam aqui (e não na tela) pra sobreviver à troca de aba.
+  // draft: montagem em andamento (não nulo = modo Montar).
+  draft?: ChordBuilderState | null;
+  // custom: último acorde personalizado concluído — aparece como a posição
+  // "Personalizado", antes dos shapes do banco do mesmo acorde. Some ao
+  // buscar outro acorde ou concluir outra montagem; troca de tom o transpõe.
+  custom?: ChordBuilderState | null;
+  customActive?: boolean; // a posição exibida é a "Personalizado"
 }
 
 export const DEFAULT_CHORDS_STATE: ChordsState = { tonic: 'C', suffixIdx: 0, posIdx: 0 };
@@ -142,11 +163,20 @@ function positionToFretboardData(position: ChordPosition): FretboardData {
   return { shape, muted, barres };
 }
 
+// A fonte reserva mais espaço acima da letra do que abaixo, então o texto
+// centralizado pelo flexbox fica visualmente baixo no círculo — sobe ~6% do
+// tamanho da fonte (medido no aparelho).
+function circleTextStyle(text: string) {
+  const fontSize = circleFontSize(text);
+  return { fontSize, transform: [{ translateY: -fontSize * 0.06 }] };
+}
+
+// Nomes longos ("C#m7(b5)", "Cm(maj7)(b5)") encolhem só o necessário pra
+// caber nos ~94dp úteis do círculo (~0,6 da fonte por caractere, em negrito).
 function circleFontSize(text: string) {
-  if (text.length <= 2) return 28;
-  if (text.length <= 4) return 22;
-  if (text.length <= 7) return 17;
-  return 13;
+  const cap = text.length <= 2 ? 32 : text.length <= 4 ? 26 : 20;
+  const fit = Math.floor(94 / (text.length * 0.6));
+  return Math.min(cap, Math.max(12, fit));
 }
 
 function shapeMinFret(shape: ShapeData) {
@@ -154,18 +184,44 @@ function shapeMinFret(shape: ShapeData) {
   return all.length > 0 ? Math.min(...all) : 0;
 }
 
+function entriesFor(tonic: NoteKey): ChordEntry[] {
+  return ((guitarData as any).chords[CHORD_DB_KEY[tonic]] ?? []) as ChordEntry[];
+}
+
+// Entrada do dicionário equivalente a um acorde montado — dá as variações
+// ("formatos convencionais") mostradas depois do "Personalizado". Inversão só
+// tem equivalente quando o banco tem a tríade com esse baixo ("/E", "m/C");
+// os shapes do acorde com a tônica no baixo seriam outro acorde. -1 = nenhuma.
+function customEntryIdx(a: ChordAnalysis): number {
+  if (!a.suffix || a.tonicPC === null) return -1;
+  const entries = entriesFor(NOTES[a.tonicPC]);
+  if (a.bassPC === a.tonicPC) return entries.findIndex(e => e.suffix === a.suffix);
+  if (a.suffix !== 'major' && a.suffix !== 'minor') return -1;
+  const prefix = a.suffix === 'minor' ? 'm/' : '/';
+  return entries.findIndex(
+    e => e.suffix.startsWith(prefix) && Note.chroma(e.suffix.slice(prefix.length)) === a.bassPC,
+  );
+}
+
+const analyze = (b: ChordBuilderState) => analyzeChord(soundingPitches(b), b.tonicPC);
+
+const BUILD_INSTRUCTIONS =
+  'Toque nas casas para marcar notas e no círculo da corda para soltá-la ou abafá-la. '
+  + 'Arraste na vertical para fazer pestana e para o lado para subir no braço. '
+  + 'Segure uma nota para torná-la a tônica.';
+
 export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHanded }: ChordsScreenProps) {
   const { tonic, suffixIdx, posIdx, typedName } = state;
+  const draft = state.draft ?? null;
+  const building = draft !== null;
+  const custom = state.custom ?? null;
   const [tonicModalVisible, setTonicModalVisible] = useState(false);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const tonicPC = NOTES.indexOf(tonic);
 
-  const chordEntries = useMemo<ChordEntry[]>(() => {
-    const dbKey = CHORD_DB_KEY[tonic];
-    return ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
-  }, [tonic]);
+  const chordEntries = useMemo<ChordEntry[]>(() => entriesFor(tonic), [tonic]);
 
   const selectedEntry = chordEntries[suffixIdx];
   const dbPositions = selectedEntry?.positions ?? [];
@@ -187,18 +243,46 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
 
   const totalPositions = usesCaged ? orderedCagedShapes.length : dbPositions.length;
 
-  const chordName = typedName ?? (selectedEntry ? `${tonic}${chordSuffixSymbol(selectedEntry.suffix)}` : tonic);
-  const description = selectedEntry ? chordDescription(selectedEntry.suffix) : '';
+  const dictName = typedName ?? (selectedEntry ? `${tonic}${chordSuffixSymbol(selectedEntry.suffix)}` : tonic);
 
   // Notas que compõem o acorde: união das classes de altura de todas as
-  // posições cadastradas para essa qualidade, ordenadas a partir da tônica.
-  const chordNotes = useMemo(() => {
-    if (!selectedEntry) return [];
+  // posições cadastradas para essa qualidade, ordenadas a partir da tônica,
+  // com o grau de cada uma pela fórmula do sufixo.
+  const dictNotes = useMemo(() => {
+    if (!selectedEntry) return { notes: [] as string[], degrees: [] as string[] };
     const pcs = new Set<number>();
     selectedEntry.positions.forEach(pos => pos.midi.forEach(m => pcs.add(m % 12)));
-    const order = Array.from({ length: 12 }, (_, i) => (tonicPC + i) % 12);
-    return order.filter(pc => pcs.has(pc)).map(pc => NOTE_NAMES[pc]);
+    const order = Array.from({ length: 12 }, (_, i) => (tonicPC + i) % 12).filter(pc => pcs.has(pc));
+    return {
+      notes: order.map(pc => NOTE_NAMES[pc]),
+      degrees: degreesFor(tonicPC, order, suffixIntervals(selectedEntry.suffix)),
+    };
   }, [selectedEntry, tonicPC]);
+
+  // Montagem em andamento e acorde personalizado concluído.
+  const draftAnalysis = useMemo(() => (draft ? analyze(draft) : null), [draft]);
+  const customAnalysis = useMemo(() => (custom ? analyze(custom) : null), [custom]);
+  const draftEmpty = !draftAnalysis || draftAnalysis.notes.length === 0;
+  const draftValid = !!draftAnalysis?.name;
+  // Personalizado sem equivalente no banco: só a posição "Personalizado".
+  const customHasVariations = !!customAnalysis && customEntryIdx(customAnalysis) >= 0;
+  const showCustom = !!custom && (!!state.customActive || !customHasVariations);
+
+  // O que a tela mostra: montagem > personalizado > dicionário.
+  const shown = building ? draftAnalysis! : customAnalysis;
+  const chordName = shown ? shown.name ?? '' : dictName;
+  const notes = shown ? shown.notes : dictNotes.notes;
+  const degrees = shown ? shown.degrees : dictNotes.degrees;
+  let description: string;
+  if (building && draftEmpty) {
+    description = BUILD_INSTRUCTIONS;
+  } else if (shown) {
+    description = [shown.hint, shown.suffix ? chordDescription(shown.suffix) : ''].filter(Boolean).join(' ');
+  } else {
+    description = selectedEntry ? chordDescription(selectedEntry.suffix) : '';
+  }
+
+  const customDrawing = showCustom ? builderToFretboard(custom!) : null;
 
   const fretboardData = useMemo<FretboardData | null>(() => {
     if (usesCaged) {
@@ -222,37 +306,82 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
   }, [searchQuery]);
 
   const handleTonicSelect = (note: NoteKey) => {
+    setTonicModalVisible(false);
+    // Personalizado: troca de tom transpõe o acorde montado.
+    if (custom && custom.tonicPC !== null) {
+      const moved = transposeBuilder(custom, NOTES.indexOf(note) - custom.tonicPC);
+      if (moved) {
+        const idx = customEntryIdx(analyze(moved));
+        onStateChange({ custom: moved, customActive: true, tonic: note, suffixIdx: Math.max(idx, 0), posIdx: 0 });
+        return;
+      }
+    }
     // Mantém a mesma qualidade ao trocar só o tom (ex.: Dm -> B continua Bm),
     // em vez de sempre voltar para a qualidade maior.
     let newSuffixIdx = 0;
     if (selectedEntry) {
-      const dbKey = CHORD_DB_KEY[note];
-      const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
-      const idx = entries.findIndex(e => e.suffix === selectedEntry.suffix);
+      const idx = entriesFor(note).findIndex(e => e.suffix === selectedEntry.suffix);
       if (idx >= 0) newSuffixIdx = idx;
     }
-    onStateChange({ tonic: note, suffixIdx: newSuffixIdx, posIdx: 0, typedName: undefined });
-    setTonicModalVisible(false);
+    onStateChange({
+      tonic: note, suffixIdx: newSuffixIdx, posIdx: 0, typedName: undefined, custom: null, customActive: false,
+    });
   };
 
+  // Buscar no meio da montagem esquece o que estava sendo montado.
   const openSearchModal = () => {
+    if (building) onStateChange({ draft: null });
     setSearchQuery('');
     setSearchModalVisible(true);
   };
 
   const handleSearchSelect = (result: SearchMatch) => {
-    const dbKey = CHORD_DB_KEY[result.tonic];
-    const entries = ((guitarData as any).chords[dbKey] ?? []) as ChordEntry[];
-    const idx = entries.findIndex(e => e.suffix === result.suffix);
+    const idx = entriesFor(result.tonic).findIndex(e => e.suffix === result.suffix);
     onStateChange({
       tonic: result.tonic,
       suffixIdx: idx >= 0 ? idx : 0,
       posIdx: 0,
       typedName: result.label !== result.symbol ? result.label : undefined,
+      custom: null,
+      customActive: false,
     });
     setSearchModalVisible(false);
     setSearchQuery('');
   };
+
+  // "Montar acorde" sempre começa uma montagem nova (mesmo no meio de outra).
+  // O personalizado anterior só se perde ao concluir o novo.
+  const startBuilding = () => onStateChange({ draft: EMPTY_BUILDER });
+  const updateDraft = (next: ChordBuilderState) => onStateChange({ draft: next });
+  const concludeDraft = () => {
+    const idx = customEntryIdx(draftAnalysis!);
+    onStateChange({
+      custom: draft,
+      customActive: true,
+      draft: null,
+      typedName: undefined,
+      posIdx: 0,
+      ...(idx >= 0 ? { tonic: NOTES[draft!.tonicPC!], suffixIdx: idx } : {}),
+    });
+  };
+
+  // Com personalizado, a posição 0 é ele e as seguintes são os shapes do banco.
+  const goPrevious = () => {
+    if (custom && posIdx === 0) onStateChange({ customActive: true });
+    else onStateChange({ posIdx: Math.max(0, posIdx - 1) });
+  };
+  const goNext = () => {
+    if (showCustom) onStateChange({ customActive: false, posIdx: 0 });
+    else onStateChange({ posIdx: Math.min(totalPositions - 1, posIdx + 1) });
+  };
+  const atFirst = custom ? showCustom : posIdx === 0;
+  const atLast = !showCustom && posIdx >= totalPositions - 1;
+
+  const handChip = (
+    <TouchableOpacity style={styles.handChip} onPress={onToggleLeftHanded} activeOpacity={0.8}>
+      <Text style={styles.handChipText}>{leftHanded ? 'Canhoto' : 'Destro'}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -263,35 +392,55 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
         style={styles.tonicButton}
         onPress={() => setTonicModalVisible(true)}
         activeOpacity={0.8}
+        disabled={building}
       >
-        <Text style={[styles.tonicButtonText, { fontSize: circleFontSize(chordName) }]}>
+        <Text style={[styles.tonicButtonText, circleTextStyle(chordName)]}>
           {chordName}
         </Text>
       </TouchableOpacity>
 
-      {/* Search chip — abre a busca de acordes do dicionário */}
-      <TouchableOpacity
-        style={styles.searchChip}
-        onPress={openSearchModal}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.searchChipText}>Buscar acorde</Text>
-      </TouchableOpacity>
-
-      {/* Chord notes chips */}
-      <View style={styles.notesRow}>
-        {chordNotes.map((n, i) => (
-          <View key={`${n}${i}`} style={[styles.noteChip, i === 0 && styles.noteChipTonic]}>
-            <Text style={styles.noteChipText}>{n}</Text>
-          </View>
-        ))}
+      {/* Buscar (dicionário) | Montar acorde (no braço) */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.searchChip} onPress={openSearchModal} activeOpacity={0.8}>
+          <Text style={styles.searchChipText}>Buscar acorde</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.searchChip} onPress={startBuilding} activeOpacity={0.8}>
+          <Text style={styles.searchChipText}>Montar acorde</Text>
+        </TouchableOpacity>
       </View>
 
+      {/* Notas do acorde com o grau de cada uma acima */}
+      <NoteChips notes={notes} degrees={degrees} />
+
       {/* Description */}
-      <Text style={styles.description} numberOfLines={4}>{description}</Text>
+      <Text style={styles.description} numberOfLines={4} adjustsFontSizeToFit>{description}</Text>
 
       {/* Chord fretboard */}
-      {fretboardData ? (
+      {building ? (
+        <>
+          <View style={styles.fretboardContainer}>
+            <BuilderFretboard state={draft!} onChange={updateDraft} leftHanded={leftHanded} />
+          </View>
+          <View style={styles.indicatorRow}>{handChip}</View>
+        </>
+      ) : customDrawing ? (
+        <>
+          <View style={styles.fretboardContainer}>
+            <ShapeFretboard
+              shape={customDrawing.shape}
+              tonicPC={custom!.tonicPC ?? -1}
+              barres={customDrawing.barres}
+              mutedStrings={customDrawing.muted}
+              leftHanded={leftHanded}
+              windowStart={fittingWindowStart(custom!)}
+            />
+          </View>
+          <View style={styles.indicatorRow}>
+            <Text style={styles.shapeIndicator}>Personalizado</Text>
+            {handChip}
+          </View>
+        </>
+      ) : fretboardData ? (
         <>
           <View style={styles.fretboardContainer}>
             <ShapeFretboard
@@ -304,13 +453,7 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
           </View>
           <View style={styles.indicatorRow}>
             <Text style={styles.shapeIndicator}>{posIdx + 1} / {totalPositions}</Text>
-            <TouchableOpacity
-              style={styles.handChip}
-              onPress={onToggleLeftHanded}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.handChipText}>{leftHanded ? 'Canhoto' : 'Destro'}</Text>
-            </TouchableOpacity>
+            {handChip}
           </View>
         </>
       ) : (
@@ -322,25 +465,49 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
       {/* Push nav buttons to same vertical position as TunerScreen's Iniciar */}
       <View style={styles.spacer} />
 
-      {/* Navigation buttons */}
-      <View style={styles.navRow}>
-        <TouchableOpacity
-          style={[styles.navButton, posIdx === 0 && styles.navButtonDisabled]}
-          onPress={() => onStateChange({ posIdx: Math.max(0, posIdx - 1) })}
-          activeOpacity={0.8}
-          disabled={posIdx === 0}
-        >
-          <Text style={styles.navButtonText}>Anterior</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.navButton, posIdx >= totalPositions - 1 && styles.navButtonDisabled]}
-          onPress={() => onStateChange({ posIdx: Math.min(totalPositions - 1, posIdx + 1) })}
-          activeOpacity={0.8}
-          disabled={posIdx >= totalPositions - 1}
-        >
-          <Text style={styles.navButtonText}>Próxima</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Navigation buttons — no modo Montar: Voltar (braço vazio) ou Limpar,
+          e Concluir (só com um acorde reconhecido). Personalizado sem
+          variações no banco: sem botões. */}
+      {building ? (
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            style={[styles.navButton, styles.navButtonSecondary]}
+            onPress={() => onStateChange({ draft: draftEmpty ? null : clearBuilder(draft!) })}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.navButtonText}>{draftEmpty ? 'Voltar' : 'Limpar'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navButton, !draftValid && styles.navButtonDisabled]}
+            onPress={concludeDraft}
+            activeOpacity={0.8}
+            disabled={!draftValid}
+          >
+            <Text style={styles.navButtonText}>Concluir</Text>
+          </TouchableOpacity>
+        </View>
+      ) : custom && !customHasVariations ? (
+        <View style={styles.navRowPlaceholder} />
+      ) : (
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            style={[styles.navButton, atFirst && styles.navButtonDisabled]}
+            onPress={goPrevious}
+            activeOpacity={0.8}
+            disabled={atFirst}
+          >
+            <Text style={styles.navButtonText}>Anterior</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navButton, atLast && styles.navButtonDisabled]}
+            onPress={goNext}
+            activeOpacity={0.8}
+            disabled={atLast}
+          >
+            <Text style={styles.navButtonText}>Próxima</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Tonic selector modal */}
       <Modal
@@ -398,11 +565,13 @@ export function ChordsScreen({ state, onStateChange, leftHanded, onToggleLeftHan
             <TextInput
               style={styles.searchInput}
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              // tônica sempre maiúscula: o leigo não precisa do shift pro "C"
+              // (o resto fica como digitado — o "M" distingue Cm7M de Cm7m)
+              onChangeText={text => setSearchQuery(text.charAt(0).toUpperCase() + text.slice(1))}
               placeholder="Ex.: C, Em7(b5), F#m..."
               placeholderTextColor={colors.neutral.mediumGray}
               autoFocus
-              autoCapitalize="none"
+              autoCapitalize="sentences"
               autoCorrect={false}
             />
             <ScrollView style={styles.scaleList} showsVerticalScrollIndicator={false}>
@@ -476,39 +645,23 @@ const styles = StyleSheet.create({
     color: colors.secondary.darkBlue,
     textAlign: 'center',
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+    width: '100%',
+  },
   searchChip: {
-    paddingHorizontal: 28,
+    flex: 1, // os dois botões da linha com a mesma largura
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 24,
     backgroundColor: colors.secondary.darkBlue,
-    marginBottom: 16,
-    minWidth: '60%',
     alignItems: 'center',
   },
   searchChipText: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.neutral.white,
-  },
-  notesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  noteChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: colors.secondary.darkBlue,
-  },
-  noteChipTonic: {
-    backgroundColor: colors.primary.orange,
-  },
-  noteChipText: {
-    fontSize: 14,
-    fontWeight: '700',
     color: colors.neutral.white,
   },
   description: {
@@ -517,7 +670,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     height: 76,
-    marginBottom: 14,
+    // respiro acima vindo do de baixo: o braço continua na mesma posição
+    marginTop: 8,
+    marginBottom: 0,
   },
   fretboardContainer: {
     alignItems: 'center',
@@ -574,6 +729,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
+  },
+  navRowPlaceholder: {
+    paddingBottom: 40,
+  },
+  navButtonSecondary: {
+    backgroundColor: colors.secondary.darkBlue,
   },
   navButtonDisabled: {
     backgroundColor: colors.neutral.mediumGray,

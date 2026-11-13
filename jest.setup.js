@@ -1,3 +1,4 @@
+/* eslint-env jest */
 /**
  * Mocks para módulos nativos de terceiros que não existem no ambiente de
  * teste (Jest não roda numa app Android real) — sem eles, qualquer teste

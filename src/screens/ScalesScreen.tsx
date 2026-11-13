@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { NoteChips } from '../components/NoteChips';
 import { ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
+import { scaleDegrees } from '../data/chordAnalysis';
 import { SCALE_DESCRIPTIONS } from '../data/scaleDescriptions';
 import { SCALE_SHAPES_C, ShapeData } from '../data/scaleShapesC';
 
@@ -53,8 +55,8 @@ const SCALES = [
   { name: 'harmonic minor',   label: 'Menor Harmônica'   },
   { name: 'major pentatonic', label: 'Pentatônica Maior' },
   { name: 'minor pentatonic', label: 'Pentatônica Menor' },
-  { name: 'major blues',      label: 'Blues Maior'       },
-  { name: 'minor blues',      label: 'Blues Menor'       },
+  { name: 'major blues',      label: 'Penta Blues Maior' },
+  { name: 'minor blues',      label: 'Penta Blues Menor' },
   { name: 'ionian',           label: 'Jônio'             },
   { name: 'dorian',           label: 'Dórico'            },
   { name: 'phrygian',         label: 'Frígio'            },
@@ -133,14 +135,8 @@ export function ScalesScreen({ state, onStateChange, leftHanded, onToggleLeftHan
         <Text style={styles.scaleChipText}>{SCALES[scaleIdx].label}</Text>
       </TouchableOpacity>
 
-      {/* Scale notes chips */}
-      <View style={styles.notesRow}>
-        {scaleNotes.map((n, i) => (
-          <View key={`${n}${i}`} style={[styles.noteChip, i === 0 && styles.noteChipTonic]}>
-            <Text style={styles.noteChipText}>{n}</Text>
-          </View>
-        ))}
-      </View>
+      {/* Notas da escala com o grau de cada uma acima */}
+      <NoteChips notes={scaleNotes} degrees={scaleDegrees(SCALES[scaleIdx].name)} />
 
       {/* Description */}
       <Text style={styles.description} numberOfLines={4}>{description}</Text>
@@ -300,6 +296,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: colors.secondary.darkBlue,
+    // a fonte reserva mais espaço acima da letra: sem isso fica baixo no círculo
+    transform: [{ translateY: -28 * 0.06 }],
   },
   scaleChip: {
     paddingHorizontal: 28,
@@ -322,34 +320,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  notesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  noteChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: colors.secondary.darkBlue,
-  },
-  noteChipTonic: {
-    backgroundColor: colors.primary.orange,
-  },
-  noteChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.neutral.white,
-  },
   description: {
     fontSize: 13,
     color: colors.secondary.mediumBlue,
     textAlign: 'center',
     lineHeight: 19,
     height: 76,
-    marginBottom: 14,
+    // respiro acima vindo do de baixo: o braço continua na mesma posição
+    marginTop: 8,
+    marginBottom: 0,
   },
   fretboardContainer: {
     alignItems: 'center',

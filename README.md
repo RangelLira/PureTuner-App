@@ -1,7 +1,8 @@
 # Pure Tuner App
 
-Utilitários musicais para o músico brasileiro: afinador cromático, metrônomo,
-dicionário de acordes e escalas com tablatura. React Native, 100% em
+Utilitários musicais para o músico brasileiro: afinador cromático, metrônomo
+(com tap tempo e 6/8), acordes (busca pela cifra e "Montar acorde"), escalas
+no braço e campo harmônico no círculo das quintas. React Native, 100% em
 Português (Brasil), **Android exclusivamente** (sem versão iOS).
 
 Detalhes de arquitetura, pipeline de áudio e convenções do projeto estão em

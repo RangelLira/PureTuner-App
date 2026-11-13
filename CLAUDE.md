@@ -42,6 +42,19 @@ continua funcionando normalmente). Sempre conferir com
 `unzip -l app-release.apk | grep raw/` se o **nome** bate, não só se o
 arquivo existe.
 
+## Ícone do App
+Fonte única: `scripts/icon/` (Python + Pillow). A geometria do diapasão
+em P (`gen.py`) gera tudo via `python scripts/icon/build.py`: adaptive
+icon (`mipmap-anydpi-v26/` + `drawable/ic_launcher_foreground.xml` +
+`ic_launcher_monochrome.xml` + `values/ic_launcher_background.xml`), os
+PNGs legados `mipmap-*/ic_launcher{,_round}.png` (fallback pro API
+24–25) e o `play-store-icon-512.png`. **Não editar os PNGs nem o vetor à
+mão**: mude os parâmetros em `build.py` (`C`) e regenere. Pra comparar
+variantes, use `python scripts/icon/gen.py` (gera `comparativo.png`).
+O símbolo ocupa 58% da altura da área visível e é centralizado pelo
+centro óptico, não pela caixa delimitadora (a haste longa fica à
+esquerda).
+
 ## Comandos Essenciais
 ```bash
 npm run android     # roda no emulador/device Android
@@ -66,6 +79,8 @@ src/
 ├── components/
 │   ├── TunerIndicator.tsx    # Medidor visual do afinador
 │   ├── ShapeFretboard.tsx    # Braço do violão em SVG — compartilhado por Escalas e Acordes
+│   ├── BuilderFretboard.tsx  # Braço interativo do "Montar acorde" (gestos → chordBuilder.ts)
+│   ├── NoteChips.tsx         # Chips de notas com o grau (T, 3m, 5J…) acima — Acordes e Escalas
 │   ├── FifthsWheel.tsx       # Círculo das quintas giratório (SVG + PanResponder)
 │   └── TabIcon.tsx           # Ícones SVG da barra inferior (mesmo traço; laranja = aba ativa, cinza = demais)
 ├── screens/
@@ -80,6 +95,8 @@ src/
 │   ├── scaleDescriptions.ts  # Texto explicativo por escala
 │   ├── chordShapesC.ts       # 5 shapes CAGED verificados (maior/menor/7/maj7/m7), em Dó
 │   ├── chordSuffixes.ts      # Símbolo, frase por extenso e descrição por sufixo de acorde
+│   ├── chordAnalysis.ts      # Graus (notação brasileira) e nome de um conjunto de notas
+│   ├── chordBuilder.ts       # Estado puro do braço no "Montar acorde" (corda, pestana, tônica)
 │   └── harmonicField.ts      # Modelo puro do círculo das quintas: janela, campo, grafia, armadura
 ├── constants/
 │   ├── colors.ts             # Design tokens de cor
@@ -134,6 +151,11 @@ e inspeciona o `delay` de cada novo `setTimeout` agendado.
   janela seguindo o tom e armadura de clave.
 - `data/chordSuffixes.test.ts` — grafias alternativas da busca de
   acordes (7M, 7+, º, ø, bemóis…) e ausência de colisão entre elas.
+- `data/chordAnalysis.test.ts` — graus (T, 3m, 5J…) de acordes e
+  escalas, nome com tônica fixa (todo sufixo do dicionário reconhecido
+  pela própria fórmula), inversões, leitura alternativa.
+- `data/chordBuilder.test.ts` — regras do braço no Montar acorde (uma
+  nota por corda, pestana, solta/abafada, tônica, casa 15, enquadramento).
 - `hooks/useLeftHanded.test.tsx` — persistência via AsyncStorage.
 - `jest.setup.js` mocka `react-native-sound`, `react-native-audio-record`
   e `react-native-keep-awake` (módulos nativos que não existem no Jest);
@@ -156,7 +178,7 @@ para testar `/2`, `/3` e `/4`.
 | Acordes     | Funcional            | Busca por prefixo + 5 shapes CAGED + modo canhoto (ver seção abaixo) |
 | Escalas     | Funcional            | Círculo de tom + 16 escalas × 5 shapes + modo canhoto       |
 | Campo       | Funcional            | Círculo das quintas giratório, maior/menor natural (ver seção abaixo) |
-| Sobre       | Funcional            | Botão "?" flutuante, modal em `AboutScreen.tsx`             |
+| Sobre       | Funcional            | Botão "?" flutuante, modal em `AboutScreen.tsx` — resumo de cada ferramenta; ao mudar uma ferramenta, revisar o texto dela ali e no site (`docs/index.html`) |
 
 ## Telas Acordes e Escalas
 
@@ -225,6 +247,55 @@ acorde do mesmo tom fica de fora (ex.: "C(9)" = C9) — garantido por
 qualidade atual (Dm → B vira Bm), com fallback pra `major` se a qualidade
 não existir nesse tom.
 
+**Graus**: acima de cada chip de nota (Acordes e Escalas) vai o grau em
+relação à tônica, em notação brasileira — T, 2M, 3m, 3M, 4J, 5d, 5J, 5A,
+6M, 7m, 7M, 9M, 11J… (`NoteChips` + `chordAnalysis.ts`). Os intervalos
+vêm da fórmula: em Escalas, de `Scale.get().intervals` da tonal; em
+Acordes, de `suffixIntervals(sufixo)` (tipo equivalente da tonal; 4
+sufixos que a tonal não conhece estão à mão em `MANUAL_INTERVALS`). Nota
+fora da fórmula (ex.: o baixo de C/D) cai no grau "neutro" por semitom.
+
+**Montar acorde** (decisões de 30/10/2026; a feature está no Changelog): botão ao lado de "Buscar acorde", sempre
+azul — tocar nele sempre começa uma montagem nova. No modo, o usuário
+marca notas no braço (`BuilderFretboard`) e a tela mostra notas, graus e
+o nome (`analyzeChord`). Botões: **Voltar** (braço vazio; volta pro que
+estava na tela) / **Limpar** (com notas) e **Concluir** (travado até as
+notas formarem um acorde com nome). "Buscar acorde" no meio da montagem
+esquece a montagem. Estado em `ChordsState` (sobrevive à troca de aba):
+`draft` = montagem em andamento; `custom` = último acorde concluído;
+`customActive` = posição "Personalizado" na tela. Regras puras em
+`chordBuilder.ts`:
+- uma nota soando por corda (outra casa substitui); toque de novo desmarca;
+- círculo à esquerda: corda solta ↔ abafada; corda sem nada = abafada;
+- arraste vertical = pestana na casa onde começou (uma só; nota atrás
+  dela é ignorada; tocar na casa da pestana a remove);
+- arraste horizontal = janela de casas, até a casa 15;
+- tônica = nota (não corda) da 1ª marcada; se some, passa pra mais antiga
+  que ainda soa; toque longo numa nota a torna tônica.
+- **Nome com tônica fixa**: compara o conjunto de classes de altura,
+  relativo à tônica, **só** com as fórmulas do dicionário (mesma grafia
+  da busca) e o power chord (C5) — decisão do Rangel: o círculo só mostra
+  acorde quando faz sentido, senão o leigo acha que qualquer cacho de
+  notas é acorde (os tipos exóticos da tonal, tipo "m#5", ficam de fora).
+  Não usa `Chord.detect` — ele escolhe a tônica sozinho. Baixo ≠ tônica
+  vira "/baixo" (inversão). Nome só com 3+ notas, exceto o power chord.
+  Sem nome, mas formando acorde com outra tônica, a legenda diz qual nota
+  segurar ("Segure a nota C para ler como C/E").
+- Gestos: o toque é lido na `View` de fora do SVG (`pointerEvents="none"`
+  no SVG), senão `locationX` vem relativo ao elemento tocado; no canhoto
+  o X é desespelhado antes do hit test.
+- **Concluir**: o acorde vira o "Personalizado" (no lugar do `n / total`)
+  e Anterior/Próxima passam pelos até 5 shapes do banco do mesmo acorde
+  (`customEntryIdx`). Inversão só tem variações se o banco tiver a tríade
+  com esse baixo ("/E", "m/C"); senão — e no power chord — fica só o
+  Personalizado, sem botões. Diagrama enquadra todas as notas
+  (`fittingWindowStart`). Sem "Editar": pra mudar, monta outro.
+- O personalizado sobrevive à troca de aba; some ao buscar outro acorde,
+  ao abrir um acorde pelo Campo ou ao concluir outra montagem. **Trocar o
+  tom pelo círculo o transpõe** (`transposeBuilder`: todas as notas andam
+  o mesmo número de casas, cordas soltas viram presas, prefere a versão
+  mais grave que caiba até a casa 15).
+
 ## Tela Campo Harmônico
 
 Círculo das quintas com 3 aros (externo = maiores, meio = relativas
@@ -239,7 +310,7 @@ janela eles poluíam e duplicavam a informação. A lista fica em 3 linhas
 (3 - 2 - 2: graus 1–3, 4–5 e 6–7). O tipo de campo é escolhido num botão na mesma posição
 e padrão do "Iniciar" do Afinador (abre modal: Maior, Maior com Sétima,
 Menor Natural, Menor Natural com Sétima). Sem texto explicativo. O tamanho
-do círculo (`height * 0.35`) foi calibrado pra esse botão não ser empurrado
+do círculo (`height * 0.36`; aros 0.80–1 / 0.60–0.80 / 0.29–0.60 do raio, o interno mais largo pros diminutos) foi calibrado pra esse botão não ser empurrado
 pra baixo do lugar do "Iniciar" — ao adicionar algo na tela, conferir. Ângulo é acumulado (não reduzido a 0–360) pra não "voltar a
 volta inteira" ao passar de Fá para Dó.
 
@@ -270,9 +341,18 @@ III; SD = iv*, iiº, VI; D = v*, VII (* = principal). Chips da lista têm
 texto sempre branco e só 2 cores (`chipColor`): tônica (I/i) = laranja,
 todos os demais = azul-escuro — sem diferenciar função por cor (já
 tentado com tons suaves por função e rejeitado: colorido demais). Sem legenda — abaixo
-de cada chip vai o papel do grau (`DEGREE_ROLE`: Tônica, Subdominante,
-Dominante, Subdominante fraca, Dominante fraca, Variante tônica, Relativa
-menor/maior), em 1 linha só (`adjustsFontSizeToFit`). O tom
+de cada chip vai o papel do grau (`DEGREE_ROLE`), em 1 linha só
+(`adjustsFontSizeToFit`). Só nomes de **função** (não de grau, tipo
+Mediante/Subtônica — misturar os dois sistemas foi rejeitado). Os
+secundários são as **relativas** dos principais, que na janela ficam lado
+a lado no outro anel (F/Dm, C/Am, G/Em). Maior: Tônica, Subdominante
+relativa (ii), Dominante relativa (iii), Subdominante, Dominante,
+Relativa menor (vi), Dominante fraca (viiº). Menor: Tônica, Subdominante
+fraca (iiº), Relativa maior (III), Subdominante, **Dominante menor** (v —
+sem sensível, nunca só "Dominante"), Subdominante relativa (VI),
+Dominante relativa (VII). Revisado em 06/11/2026;
+campo menor "híbrido" (V maior) avaliado e rejeitado: o acorde maior não
+cabe no anel dos menores e disco e lista têm que mostrar o mesmo. O tom
 selecionado no círculo também é laranja — e esse destaque é uma camada
 **fixa** no centro da janela (não gira com o disco): as camadas são
 setores (giram) → destaque laranja (fixo) → rótulos (giram) → máscara da
@@ -370,21 +450,11 @@ toque sem re-render).
 ## Versões e Pendências
 Versão atual: **1.1 (versionCode 3)**. Histórico por versão em
 `documentation/Changelog.md` — ao mudar `versionCode`/`versionName`,
-registrar lá na mesma tarefa.
+registrar lá na mesma tarefa e atualizar a versão escrita no Sobre
+(`AboutScreen.tsx`, fixa no texto).
 
-Itens originais de `PRODUCT.md` ("Problemas para corrigir"): todos
-implementados.
-
-Pendências registradas em 29/10/2026 (o item do BPM centralizado foi
-resolvido em 30/10):
-2. **Revisão geral das telas**: deixar mais enxuto e menos poluído — o
-   app precisa ser fácil de entender e usar.
-3. **Orientação horizontal**: hoje a tela quebra ao girar o celular.
-   Objetivo é um layout próprio em paisagem (elementos reagrupados, não só
-   esticados) — muitos músicos estudam com o celular deitado. Ponto
-   técnico de destaque para o portfólio.
-4. **Screenshots da Play Store**: tirar novas, já com a aba Campo (as
-   atuais são de 22/09 e têm `]` sobrando no nome).
+O que vem depois (revisão das telas, paisagem, navegação por arraste,
+screenshots da loja): `documentation/Roadmap.md`.
 
 ## Convenções do Projeto
 - Nenhum Redux / Context API — React hooks locais são suficientes

@@ -61,25 +61,50 @@ export function AboutModal({ visible, onClose }: AboutModalProps) {
 
             <Text style={styles.sectionTitle}>Sobre o app</Text>
             <Text style={styles.body}>
-              Pure Tuner reúne as ferramentas essenciais para o músico em estudo: afinador
-              cromático de alta precisão, metrônomo com divisões rítmicas, dicionário completo
-              de acordes e tablatura das principais escalas.
+              O Pure Tuner reúne num só lugar as ferramentas do dia a dia de estudo: afinador,
+              metrônomo, acordes, escalas e campo harmônico. Tudo em português, pensado para
+              quem está aprendendo. Os diagramas do braço têm modo canhoto.
             </Text>
 
             <View style={styles.divider} />
 
             <Text style={styles.sectionTitle}>Afinador</Text>
+            <Text style={[styles.body, styles.toolGap]}>
+              Toque uma corda e o app mostra a nota e se ela está baixa, alta ou afinada.
+              Afinação padrão A 440 Hz. A tela fica acesa enquanto o afinador escuta.
+            </Text>
+
+            <Text style={styles.sectionTitle}>Metrônomo</Text>
+            <Text style={[styles.body, styles.toolGap]}>
+              De 40 a 220 BPM, compassos de 1/4 a 4/4 e 6/8, subdivisões e acento no primeiro
+              tempo. Toque no círculo do BPM no ritmo de uma música para descobrir o andamento;
+              segure para digitar o valor. Continua tocando com o app em segundo plano.
+            </Text>
+
+            <Text style={styles.sectionTitle}>Acordes</Text>
+            <Text style={[styles.body, styles.toolGap]}>
+              Busque o acorde do jeito que ele aparece na cifra (C7M, C7+, Cmaj7…) e veja até 5
+              formas de tocar, com as notas e o grau de cada uma. Em Montar acorde, marque as
+              notas no braço e o app diz qual acorde você formou.
+            </Text>
+
+            <Text style={styles.sectionTitle}>Escalas</Text>
+            <Text style={[styles.body, styles.toolGap]}>
+              16 escalas em qualquer tom, cada uma com 5 desenhos no braço, as notas e os graus.
+            </Text>
+
+            <Text style={styles.sectionTitle}>Campo Harmônico</Text>
             <Text style={styles.body}>
-              Afinação padrão A 440 Hz. Usa o microfone do dispositivo para detectar a nota
-              tocada e exibe em tempo real a posição de afinação com precisão em cents.
-              A tela permanece acesa enquanto o afinador estiver ativo.
+              Gire o círculo das quintas para ver os 7 acordes de cada tom, maior ou menor
+              natural, com ou sem sétima, e a função de cada um: tônica, subdominante ou
+              dominante.
             </Text>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Versão</Text>
-              <Text style={styles.infoValue}>1.0.0</Text>
+              <Text style={styles.infoValue}>1.1</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Afinação padrão</Text>
@@ -184,6 +209,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.neutral.mediumGray,
     lineHeight: 22,
+  },
+  toolGap: {
+    marginBottom: 16,
   },
   infoRow: {
     flexDirection: 'row',

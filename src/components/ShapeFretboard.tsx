@@ -4,17 +4,17 @@ import { colors } from '../constants/colors';
 import type { ShapeData } from '../data/scaleShapesC';
 
 // String order: high e at top → low E at bottom (standard guitar diagram)
-const STRING_ORDER = ['e', 'B', 'G', 'D', 'A', 'E'] as const;
+export const STRING_ORDER = ['e', 'B', 'G', 'D', 'A', 'E'] as const;
 const STRING_PC: Record<string, number> = { e: 4, B: 11, G: 7, D: 2, A: 9, E: 4 };
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-const N_SLOTS = 7;
-const PAD_LEFT = 30;
-const PAD_TOP = 30;
+export const N_SLOTS = 7;
+export const PAD_LEFT = 30;
+export const PAD_TOP = 30;
 const PAD_RIGHT = 10;
 const PAD_BOT = 16;
-const FRET_W = 46;
-const STR_H = 34;
+export const FRET_W = 46;
+export const STR_H = 34;
 const DOT_R = 11;
 // Open-string circle sits left of the nut with a small gap (floating indicator, no string line through it)
 const OPEN_CX = PAD_LEFT - DOT_R - 5;
@@ -33,9 +33,13 @@ interface Props {
   barres?: FretboardBarre[];
   mutedStrings?: string[];
   leftHanded?: boolean;
+  // Janela fixa de casas (Montar acorde): 1ª casa visível. Sem ela, a janela
+  // é calculada pelo próprio shape. Com ela, a coluna de cordas soltas/
+  // abafadas aparece sempre, mesmo longe da pestana do braço.
+  windowStart?: number;
 }
 
-export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHanded }: Props) {
+export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHanded, windowStart }: Props) {
   // Espelhamento horizontal para canhotos: reflete qualquer X em torno do
   // centro do canvas. A ordem vertical das cordas não muda — só o eixo dos
   // trastes inverte (pestana à direita, tom sobe da direita pra esquerda).
@@ -47,9 +51,11 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHande
   const minF = nonOpenFrets.length > 0 ? Math.min(...nonOpenFrets) : 1;
 
   // Show nut when shape touches the lower neck (fret ≤ 3) or has open strings
-  const isNutVisible = hasOpen || minF <= 3;
+  const isNutVisible = windowStart !== undefined ? windowStart === 1 : hasOpen || minF <= 3;
+  // Coluna de cordas soltas/abafadas à esquerda da pestana
+  const showOpenColumn = windowStart !== undefined || isNutVisible;
   // windowBase = the fret that maps to slot 0
-  const windowBase = isNutVisible ? 1 : minF;
+  const windowBase = windowStart ?? (isNutVisible ? 1 : minF);
 
   function slotCX(slot: number) {
     return PAD_LEFT + slot * FRET_W + FRET_W / 2;
@@ -106,7 +112,7 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHande
               stroke="#B8B8B8"
               strokeWidth={isThick ? 2 : 1}
             />
-            {!isNutVisible && (
+            {!showOpenColumn && (
               mutedStrings?.includes(s) ? (
                 <SvgText
                   x={mx(PAD_LEFT - 4)} y={y + 4}
@@ -190,7 +196,7 @@ export function ShapeFretboard({ shape, tonicPC, barres, mutedStrings, leftHande
       {/* Open string circles — same size as note dots, left of nut.
           All 6 strings shown: gray + string name when not in scale,
           blue/orange + note name when the scale uses that open string. */}
-      {isNutVisible && STRING_ORDER.map((s, si) => {
+      {showOpenColumn && STRING_ORDER.map((s, si) => {
         const isMuted = mutedStrings?.includes(s) ?? false;
         const inShape = (shape[s] ?? []).includes(0);
         const pc = STRING_PC[s];

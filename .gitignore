@@ -57,3 +57,7 @@ escalas.ods
 
 # Claude Code — configuração local de permissões (específica desta máquina)
 .claude/settings.local.json
+
+# gerador do ícone (scripts/icon)
+__pycache__/
+scripts/icon/comparativo.png
