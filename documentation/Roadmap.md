@@ -23,7 +23,7 @@ Sobre e do site atualizados.
 2. ⬜ **Revisão geral das telas** — mais enxutas, fáceis de entender.
 3. ⬜ **Layout em paisagem** — layout próprio, elementos reagrupados.
 4. ⬜ **Screenshots novas da Play Store** — com a aba Campo e o Montar
-   acorde; subir junto o ícone novo (`play-store-icon-512.png`).
+   acorde; subir junto o ícone novo (`logo/icone-512.png`); prints em `store/screenshots/`.
 
 ## Ideias (não priorizadas)
 

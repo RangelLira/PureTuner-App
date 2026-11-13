@@ -1,7 +1,7 @@
 """Gerador paramétrico do ícone PureTuner (diapasão em forma de P).
 
 Rodar: python scripts/icon/gen.py -> scripts/icon/comparativo.png, folha que
-compara as variantes de VARIANTS com o play-store-icon-512.png atual, em
+compara as variantes de VARIANTS com o logo/icone-512.png atual, em
 máscara redonda, squircle e tamanho pequeno. Os recursos finais saem de
 build.py.
 
@@ -111,7 +111,7 @@ def original(size, shape):
 
 
 ORIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
-                    "play-store-icon-512.png")
+                    "logo", "icone-512.png")
 
 VARIANTS = {
     "Atual": None,

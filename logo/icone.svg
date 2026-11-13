@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Gerado por scripts/icon/build.py — não editar à mão. -->
+  <rect width="512" height="512" fill="#FF5E28"/>
+  <path d="M216.17,135.2 L216.17,376.8 M310.45,135.2 L310.45,233.8 L216.17,309.34" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#303F51" stroke-width="55.36"/>
+  <path d="M216.17,135.2 L216.17,376.8 M310.45,135.2 L310.45,233.8 L216.17,309.34" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#FFFFFF" stroke-width="34.60"/>
+</svg>

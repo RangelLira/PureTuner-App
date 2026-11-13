@@ -5,8 +5,10 @@ Utilitários musicais para o músico brasileiro: afinador cromático, metrônomo
 no braço e campo harmônico no círculo das quintas. React Native, 100% em
 Português (Brasil), **Android exclusivamente** (sem versão iOS).
 
-Detalhes de arquitetura, pipeline de áudio e convenções do projeto estão em
-[`CLAUDE.md`](./CLAUDE.md).
+Documentação em [`documentation/`](./documentation): produto (`PRD.md`),
+telas e gestos (`UserFlow.md`), visual (`StyleGuide.md`), arquitetura,
+pipeline de áudio e build (`TechSpec.md`), decisões (`Decisions.md`),
+próximos passos (`Roadmap.md`) e histórico (`Changelog.md`).
 
 # Como rodar
 

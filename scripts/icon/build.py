@@ -1,7 +1,7 @@
 """Gera os recursos finais do ícone (variante C) a partir da geometria de gen.py.
 
 Rodar da raiz do projeto: python scripts/icon/build.py   (requer Pillow)
-Sobrescreve mipmap-*/ic_launcher*.png, play-store-icon-512.png, o adaptive
+Sobrescreve mipmap-*/ic_launcher*.png, logo/icone-512.png, logo/icone.svg, o adaptive
 icon (mipmap-anydpi-v26), os vetores ic_launcher_foreground/monochrome e a
 cor de fundo (values/ic_launcher_background.xml).
 """
@@ -115,12 +115,28 @@ COLOR = '''<?xml version="1.0" encoding="utf-8"?>
 
 DENS = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 
+
+def svg():
+    """Ícone quadrado 512 em SVG (mesma geometria do PNG da loja)."""
+    lines, ww, ow = transformed(512, 512, C["height_frac"])
+    d = path_data(lines)
+    rgb = lambda c: "#%02X%02X%02X" % c
+    stroke = 'fill="none" stroke-linecap="round" stroke-linejoin="round"'
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Gerado por scripts/icon/build.py — não editar à mão. -->
+  <rect width="512" height="512" fill="{rgb(gen.BG)}"/>
+  <path d="{d}" {stroke} stroke="{rgb(gen.OUTLINE)}" stroke-width="{ow:.2f}"/>
+  <path d="{d}" {stroke} stroke="{rgb(gen.WHITE)}" stroke-width="{ww:.2f}"/>
+</svg>
+'''
+
 if __name__ == "__main__":
     for dn, s in DENS.items():
         d = os.path.join(RES, f"mipmap-{dn}")
         png(s, "square").save(os.path.join(d, "ic_launcher.png"))
         png(s, "circle").save(os.path.join(d, "ic_launcher_round.png"))
-    png(512, "square").convert("RGB").save(os.path.join(ROOT, "play-store-icon-512.png"))
+    png(512, "square").convert("RGB").save(os.path.join(ROOT, "logo", "icone-512.png"))
+    open(os.path.join(ROOT, "logo", "icone.svg"), "w", encoding="utf-8").write(svg())
     any_ = os.path.join(RES, "mipmap-anydpi-v26")
     os.makedirs(any_, exist_ok=True)
     for n in ("ic_launcher.xml", "ic_launcher_round.xml"):
