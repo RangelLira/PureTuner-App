@@ -13,7 +13,7 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   icon (fundo laranja + símbolo vetorial na zona segura), então o launcher
   aplica a própria máscara (círculo, squircle…) sem cortar. Também ganhou
   versão monocromática pros ícones temáticos do Android 13+. PNGs legados
-  e `play-store-icon-512.png` regenerados a partir da mesma geometria
+  e ícone da loja (`logo/icone-512.png`) regenerados a partir da mesma geometria
   (`scripts/icon/`).
 - **Sobre** e **site**: textos reescritos com as cinco ferramentas. O
   Sobre só descrevia o Afinador e mostrava a versão 1.0.0; o site não
@@ -54,6 +54,15 @@ O que mudou em cada versão publicada (ou preparada para publicação).
   formatos convencionais do mesmo acorde; trocar o tom o transpõe.
 - **Graus acima das notas** em Acordes e Escalas, em notação brasileira
   (T, 3m, 3M, 5J, 7m, 7M…).
+
+### Organização (sem efeito no app)
+- Documentação no padrão da Contest Software: `PRD.md`, `UserFlow.md`,
+  `StyleGuide.md`, `TechSpec.md` e `Decisions.md` criados a partir do
+  antigo `CLAUDE.md`, que virou só a porta de entrada.
+- Imagens organizadas: ícone em `logo/` (agora também em SVG), material
+  da loja em `store/` (prints renomeados para `NN-tela.jpeg`).
+  `PRODUCT.md` e o `ROADMAP.md` de Escalas foram para
+  `documentation/archive/`.
 
 ## 1.1 (versionCode 3) — 29/10/2026
 
