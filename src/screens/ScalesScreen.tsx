@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { NoteChips } from '../components/NoteChips';
 import { ShapeFretboard } from '../components/ShapeFretboard';
 import { colors } from '../constants/colors';
+import { scaleDegrees } from '../data/chordAnalysis';
 import { SCALE_DESCRIPTIONS } from '../data/scaleDescriptions';
 import { SCALE_SHAPES_C, ShapeData } from '../data/scaleShapesC';
 
@@ -133,14 +135,8 @@ export function ScalesScreen({ state, onStateChange, leftHanded, onToggleLeftHan
         <Text style={styles.scaleChipText}>{SCALES[scaleIdx].label}</Text>
       </TouchableOpacity>
 
-      {/* Scale notes chips */}
-      <View style={styles.notesRow}>
-        {scaleNotes.map((n, i) => (
-          <View key={`${n}${i}`} style={[styles.noteChip, i === 0 && styles.noteChipTonic]}>
-            <Text style={styles.noteChipText}>{n}</Text>
-          </View>
-        ))}
-      </View>
+      {/* Notas da escala com o grau de cada uma acima */}
+      <NoteChips notes={scaleNotes} degrees={scaleDegrees(SCALES[scaleIdx].name)} />
 
       {/* Description */}
       <Text style={styles.description} numberOfLines={4}>{description}</Text>
@@ -324,27 +320,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  notesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 12,
-  },
-  noteChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: colors.secondary.darkBlue,
-  },
-  noteChipTonic: {
-    backgroundColor: colors.primary.orange,
-  },
-  noteChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.neutral.white,
-  },
   description: {
     fontSize: 13,
     color: colors.secondary.mediumBlue,
@@ -353,7 +328,7 @@ const styles = StyleSheet.create({
     height: 76,
     // respiro acima vindo do de baixo: o braço continua na mesma posição
     marginTop: 8,
-    marginBottom: 6,
+    marginBottom: 0,
   },
   fretboardContainer: {
     alignItems: 'center',
