@@ -46,7 +46,8 @@ python scripts/icon/build.py             # regenera o ícone (requer Pillow)
 
 ## Fora do Escopo
 
-Este app **não** terá: versão iOS, outros idiomas, temas/modo escuro,
+Este app **não** terá: cara de curso (não ensina a tocar), recursos além
+de microfone e alto-falante, versão iOS, outros idiomas, temas/modo escuro,
 referência diferente de A 440, conta/login/backend/anúncios/coleta de
 dados, menor harmônica/melódica no Campo, grafia Fá♯ no setor 6, "Editar
 acorde". Não implementar, nem parcialmente, sem decisão registrada em

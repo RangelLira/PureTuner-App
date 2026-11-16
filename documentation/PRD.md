@@ -9,21 +9,27 @@ consolidada aqui em 2026-11-13, junto com o comportamento já publicado.
 
 ## Resumo
 
-Um "canivete suíço" para o músico brasileiro em estudo: afinador,
-metrônomo, acordes, escalas e campo harmônico num app só, em português.
-Pensado para o **leigo**: o app mostra como a música é formada (notas,
-graus, funções) em vez de supor que o usuário já sabe teoria. A
+Um "canivete suíço" para o músico brasileiro que está estudando ou
+aprendendo: afinador, metrônomo, acordes, escalas e campo harmônico num
+app só, em português. **Não é um curso e não pretende ensinar ninguém a
+tocar**: é ferramenta de apoio ao estudo. Pensado para o **leigo**: mostra
+como a música é formada (notas, graus, funções) sem supor que o usuário
+já sabe teoria. A
 referência de tom e público é a de um famoso site brasileiro de cifras.
-Também é projeto de portfólio, então é enxuto e as decisões técnicas são
-documentadas.
+É o projeto 1 do portfólio do Rangel Lira (marca *Contest Software*),
+então é enxuto e as decisões técnicas são documentadas.
 
 ## Princípios inegociáveis
 
 - **Português (Brasil)** apenas, com termos e cifra do uso brasileiro
   (7M, 7+, º, ø; graus T, 3m, 5J…).
 - **Android** apenas.
-- **Funciona offline, sem conta e sem coleta de dados.** O microfone é
-  usado só em tempo real, e nada é gravado nem enviado.
+- **100% local: usa só o microfone e o alto-falante.** Funciona offline,
+  sem conta e sem coleta de dados. O microfone é usado só em tempo real,
+  e nada é gravado nem enviado.
+- **Gratuito, código aberto, sem anúncios nem monetização**, com respeito
+  total à LGPD. É a filosofia comum do portfólio (`Meus
+  Projetos/contest-software.md` › Visão do portfólio).
 - **Fácil para o leigo**: o app nunca engana. Por exemplo, o Montar
   acorde só dá nome quando as notas formam um acorde de verdade.
 - **Afinação padrão A 440 Hz**, a que o público usa.
@@ -123,6 +129,8 @@ documentadas.
 
 | Não terá | Até quando | Motivo |
 |---|---|---|
+| Curso / aulas / trilha de aprendizado ("ensinar a tocar") | nunca | É ferramenta de estudo, não curso |
+| Recursos além de microfone e alto-falante (rede, câmera, localização…) | nunca | 100% local |
 | Versão iOS | nunca | Projeto de portfólio enxuto; `ios/` removido (D-001) |
 | Outros idiomas (i18n) | nunca | Público brasileiro (D-002) |
 | Temas / modo escuro | nunca | Esquema fixo branco e laranja (D-003) |
