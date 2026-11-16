@@ -61,3 +61,14 @@ escalas.ods
 # gerador do ícone (scripts/icon)
 __pycache__/
 scripts/icon/comparativo.png
+
+# Segurança — padrão Contest Software (2026-11-16): segredos e arquivos locais do Claude Code
+keystore.properties
+*.local.md
+.env
+.env.*
+!.env.example
+google-services.json
+GoogleService-Info.plist
+.claude/worktrees/
+.claude/projects/
